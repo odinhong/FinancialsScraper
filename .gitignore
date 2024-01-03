@@ -3,7 +3,7 @@
 #
 
 # SEC files
-SECfiles/
+SEC-files/
 
 # .env file
 .env

@@ -1,12 +1,74 @@
 package fetchdata
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
+	"time"
 )
+
+func DownloadManySECFiles(downloadLinks []string, filePaths []string) error {
+	if len(downloadLinks) != len(filePaths) {
+		return errors.New("the length of downloadLinks and filePaths must match")
+	}
+
+	// Create a ticker that emits every second.
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	// Use a wait group to wait for all the goroutines to finish.
+	var wg sync.WaitGroup
+
+	// Error channel to collect errors from goroutines.
+	errorsCh := make(chan error, len(downloadLinks))
+
+	// This channel will block goroutines once it's filled until a tick allows more to proceed.
+	semaphore := make(chan struct{}, 10)
+
+	for i, link := range downloadLinks {
+		// Increment the WaitGroup counter.
+		wg.Add(1)
+
+		// Start a goroutine for each download.
+		go func(link, path string) {
+			defer wg.Done()
+
+			// Wait for the signal to start or for the ticker to allow another request.
+			<-ticker.C
+			semaphore <- struct{}{} // Acquire a token.
+
+			// Perform the download.
+			err := DownloadOneSECFile(link, path)
+			if err != nil {
+				errorsCh <- err
+			}
+
+			<-semaphore // Release the token.
+		}(link, filePaths[i])
+	}
+
+	// Close the errors channel when all goroutines are done.
+	go func() {
+		wg.Wait()
+		close(errorsCh)
+	}()
+
+	// Collect errors from the error channel.
+	var allErrors error
+	for err := range errorsCh {
+		if allErrors == nil {
+			allErrors = err
+		} else {
+			allErrors = fmt.Errorf("%v; %v", allErrors, err)
+		}
+	}
+
+	return allErrors
+}
 
 func DownloadOneSECFile(downloadLink, filePath string) error {
 	// Ensure the directory exists
