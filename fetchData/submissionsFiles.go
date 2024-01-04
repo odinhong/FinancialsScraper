@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/tidwall/gjson"
 )
 
 type Filing struct {
@@ -17,7 +19,41 @@ type Filing struct {
 	FileNumber         string `json:"fileNumber"`
 	FilmNumber         string `json:"filmNumber"`
 	Items              string `json:"items"`
-	Size               int64  `json:"size"`
+	Size               string `json:"size"`
+}
+
+func ParseOneJsonSubmissionFile(filePath string) ([]int, error) {
+	jsonString, err := ReadJsonFile(filePath)
+	if err != nil {
+		err = fmt.Errorf("couldn't read json file %v: %v", filePath, err)
+		return nil, err
+	}
+	if !gjson.Valid(jsonString) {
+		err = fmt.Errorf("invalid json %v", filePath)
+		return nil, err
+	}
+
+	var fileName string = strings.ReplaceAll(filePath, "SEC-files/submissions/", "")
+	var doesFileNameIncludeSubmissions bool = strings.Contains(fileName, "submissions")
+
+	var prefix string = "filings.recent."
+	if doesFileNameIncludeSubmissions {
+		prefix = ""
+	}
+
+	var locationsOf10K10Q []int
+	testing := gjson.Get(jsonString, prefix+"form")
+	testing.ForEach(func(key, value gjson.Result) bool {
+		index := int(key.Int())
+		form := value.String()
+
+		if form == "10-K" || form == "10-Q" {
+			locationsOf10K10Q = append(locationsOf10K10Q, index)
+		}
+		return true // Continue iterating over all items
+	})
+
+	return locationsOf10K10Q, nil
 }
 
 func GetSubmissionFilesOfCIK(CIK string) ([]string, error) {
@@ -38,10 +74,6 @@ func GetSubmissionFilesOfCIK(CIK string) ([]string, error) {
 
 	return submissionFiles, nil
 }
-
-// func ParseOneSubmissionFile(filePath string) {
-
-// }
 
 func ReadJsonFile(filePath string) (string, error) {
 	// Read the file content
