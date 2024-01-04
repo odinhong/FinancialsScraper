@@ -9,7 +9,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-type Filing struct {
+type FilingMetaData struct {
 	AccessionNumber    string `json:"accessionNumber"`
 	FilingDate         string `json:"filingDate"`
 	ReportDate         string `json:"reportDate"`
@@ -22,7 +22,24 @@ type Filing struct {
 	Size               string `json:"size"`
 }
 
-func ParseOneJsonSubmissionFile(filePath string) ([]int, error) {
+func Get10K10QMetadataFromSubmissionFilesCIK(CIK string) ([]FilingMetaData, error) {
+	submissionFiles, err := GetSubmissionFilesOfCIK(CIK)
+	if err != nil {
+		return nil, err
+	}
+	var metadataSlice []FilingMetaData
+	for _, submissionFile := range submissionFiles {
+		if data, err := Parse10K10QmetadataFromSubmissionJsonFile(submissionFile); err == nil {
+			metadataSlice = append(metadataSlice, data...)
+		} else {
+			// Handle the error, e.g., log it or return it
+			return nil, err
+		}
+	}
+	return metadataSlice, nil
+}
+
+func Parse10K10QmetadataFromSubmissionJsonFile(filePath string) ([]FilingMetaData, error) {
 	jsonString, err := ReadJsonFile(filePath)
 	if err != nil {
 		err = fmt.Errorf("couldn't read json file %v: %v", filePath, err)
@@ -33,7 +50,7 @@ func ParseOneJsonSubmissionFile(filePath string) ([]int, error) {
 		return nil, err
 	}
 
-	var fileName string = strings.ReplaceAll(filePath, "SEC-files/submissions/", "")
+	var fileName string = filepath.Base(filePath)
 	var doesFileNameIncludeSubmissions bool = strings.Contains(fileName, "submissions")
 
 	var prefix string = "filings.recent."
@@ -42,8 +59,8 @@ func ParseOneJsonSubmissionFile(filePath string) ([]int, error) {
 	}
 
 	var locationsOf10K10Q []int
-	testing := gjson.Get(jsonString, prefix+"form")
-	testing.ForEach(func(key, value gjson.Result) bool {
+	listOfForms := gjson.Get(jsonString, prefix+"form")
+	listOfForms.ForEach(func(key, value gjson.Result) bool {
 		index := int(key.Int())
 		form := value.String()
 
@@ -53,12 +70,30 @@ func ParseOneJsonSubmissionFile(filePath string) ([]int, error) {
 		return true // Continue iterating over all items
 	})
 
-	return locationsOf10K10Q, nil
+	var FilingMetaDatSlice []FilingMetaData
+	for i := 0; i < len(locationsOf10K10Q); i++ {
+		var metaData FilingMetaData
+		metaData.AccessionNumber = gjson.Get(jsonString, fmt.Sprintf("%saccessionNumber.%d", prefix, locationsOf10K10Q[i])).String()
+		metaData.FilingDate = gjson.Get(jsonString, fmt.Sprintf("%sfilingDate.%d", prefix, locationsOf10K10Q[i])).String()
+		metaData.ReportDate = gjson.Get(jsonString, fmt.Sprintf("%sreportDate.%d", prefix, locationsOf10K10Q[i])).String()
+		metaData.AcceptanceDateTime = gjson.Get(jsonString, fmt.Sprintf("%sacceptanceDateTime.%d", prefix, locationsOf10K10Q[i])).String()
+		metaData.Act = gjson.Get(jsonString, fmt.Sprintf("%sact.%d", prefix, locationsOf10K10Q[i])).String()
+		metaData.Form = gjson.Get(jsonString, fmt.Sprintf("%sform.%d", prefix, locationsOf10K10Q[i])).String()
+		metaData.FileNumber = gjson.Get(jsonString, fmt.Sprintf("%sfileNumber.%d", prefix, locationsOf10K10Q[i])).String()
+		metaData.FilmNumber = gjson.Get(jsonString, fmt.Sprintf("%sfilmNumber.%d", prefix, locationsOf10K10Q[i])).String()
+		metaData.Items = gjson.Get(jsonString, fmt.Sprintf("%sitems.%d", prefix, locationsOf10K10Q[i])).String()
+		metaData.Size = gjson.Get(jsonString, fmt.Sprintf("%ssize.%d", prefix, locationsOf10K10Q[i])).String()
+
+		FilingMetaDatSlice = append(FilingMetaDatSlice, metaData)
+	}
+
+	return FilingMetaDatSlice, nil
 }
 
 func GetSubmissionFilesOfCIK(CIK string) ([]string, error) {
 	var submissionFiles []string
-	baseDirectory := "SEC-files/submissions"
+	// baseDirectory := "SEC-files/submissions"
+	baseDirectory := filepath.Join("SEC-files", "submissions")
 
 	files, err := os.ReadDir(baseDirectory)
 	if err != nil {
@@ -76,7 +111,6 @@ func GetSubmissionFilesOfCIK(CIK string) ([]string, error) {
 }
 
 func ReadJsonFile(filePath string) (string, error) {
-	// Read the file content
 	jsonData, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", fmt.Errorf("error reading JSON file: %v", err)
