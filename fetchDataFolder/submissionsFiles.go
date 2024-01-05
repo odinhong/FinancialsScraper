@@ -1,12 +1,14 @@
 package fetchdata
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/tidwall/gjson"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type FilingMetaData struct {
@@ -20,6 +22,33 @@ type FilingMetaData struct {
 	FilmNumber         string `json:"filmNumber"`
 	Items              string `json:"items"`
 	Size               string `json:"size"`
+}
+
+// var filingMetaDataCollection *mongo.Collection
+
+func Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(client *mongo.Client, CIK string) error {
+	metadataSlice, err := Get10K10QMetadataFromSubmissionFilesCIK(CIK)
+	if err != nil {
+		return err
+	}
+
+	databaseName := "testDatabase"
+	collectionName := "testMetaDataOf10K10Q"
+	collection := client.Database(databaseName).Collection(collectionName)
+
+	// Use a context with timeout or a background context as needed
+	ctx := context.Background()
+
+	// Insert each meta data record into MongoDB
+	for _, metaData := range metadataSlice {
+		_, err := collection.InsertOne(ctx, metaData)
+		if err != nil {
+			return fmt.Errorf("failed to store metadata: %v", err)
+		}
+	}
+
+	fmt.Println("stored metadata to Mongo filingMetaData")
+	return nil
 }
 
 func Get10K10QMetadataFromSubmissionFilesCIK(CIK string) ([]FilingMetaData, error) {
