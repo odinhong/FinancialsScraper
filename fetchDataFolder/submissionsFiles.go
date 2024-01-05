@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	"github.com/tidwall/gjson"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type FilingMetaData struct {
@@ -39,9 +41,13 @@ func Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(client *mongo.Client, CI
 	// Use a context with timeout or a background context as needed
 	ctx := context.Background()
 
-	// Insert each meta data record into MongoDB
+	// Insert or update each meta data record into MongoDB
 	for _, metaData := range metadataSlice {
-		_, err := collection.InsertOne(ctx, metaData)
+		filter := bson.M{"accessionNumber": metaData.AccessionNumber}
+		update := bson.M{"$setOnInsert": metaData}
+		opts := options.Update().SetUpsert(true)
+
+		_, err := collection.UpdateOne(ctx, filter, update, opts)
 		if err != nil {
 			return fmt.Errorf("failed to store metadata: %v", err)
 		}
