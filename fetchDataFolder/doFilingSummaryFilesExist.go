@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/tidwall/gjson"
 	"go.mongodb.org/mongo-driver/bson"
@@ -14,12 +16,30 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// func testing123(accessionNumbers []string, CIKs []string) {
-// 	var base_url = "https://www.sec.gov/Archives/edgar/data/"
-// 	var complete_url = base_url + CIKs[0] + "/" + accessionNumbers[0] + "/index.json"
-// 	//get the response body from complete_url
+func CheckAllFilingIndexJsonForExistenceOfFilingSummary(client *mongo.Client) {
+	CIK_slice, accessionNumber_slice, _ := GetListOfFilingsThatHaveNotCheckedExistenceOfFilingSummary(client)
 
-// }
+	var wg sync.WaitGroup
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	batchSize := 10
+	for i := 0; i < len(CIK_slice); i += batchSize {
+		<-ticker.C // wait for the next tick
+		batchEndIndex := i + batchSize
+		if batchEndIndex > len(CIK_slice) {
+			batchEndIndex = len(CIK_slice)
+		}
+		for j := i; j < batchEndIndex; j++ {
+			wg.Add(1)
+			go func(j int) {
+				defer wg.Done()
+				CheckOneFilingIndexJsonForExistenceOfFilingSummary(CIK_slice[j], accessionNumber_slice[j], client)
+			}(j)
+		}
+		wg.Wait() // wait for the current batch to finish before proceeding to the next batch
+	}
+}
 
 func CheckOneFilingIndexJsonForExistenceOfFilingSummary(CIK string, accessionNumber string, client *mongo.Client) {
 	userAgent := os.Getenv("USER_AGENT")
@@ -130,5 +150,5 @@ func GetListOfFilingsThatHaveNotCheckedExistenceOfFilingSummary(client *mongo.Cl
 		return nil, nil, err
 	}
 
-	return accessionNumbers, ciks, nil
+	return ciks, accessionNumbers, nil
 }

@@ -48,8 +48,8 @@ func main() {
 	// var KO_CIK string = "0000021344"
 	// var META_CIK string = "0001326801"
 	// var AAPL_CIK string = "0000320193"
-	var SMRT_CIK string = "0001837014"
-	var SMRT_accessionNumber1 string = "0001104659-21-068286"
+	// var SMRT_CIK string = "0001837014"
+	// var SMRT_accessionNumber1 string = "0001104659-21-068286"
 
 	// test, err := fetchdata.GetSubmissionFilesOfCIK(SMRT_CIK)
 	// fmt.Println(test)
@@ -74,5 +74,9 @@ func main() {
 
 	// fetchdata.Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(client, SMRT_CIK)
 
-	fetchdata.CheckOneFilingIndexJsonForExistenceOfFilingSummary(SMRT_CIK, SMRT_accessionNumber1, client)
+	// fetchdata.CheckOneFilingIndexJsonForExistenceOfFilingSummary(SMRT_CIK, SMRT_accessionNumber1, client)
+
+	// fetchdata.CheckAllFilingIndexJsonForExistenceOfFilingSummary(client)
+
+	fetchdata.RetrieveCIKAndAccessionNumberThatHaveFilingSummary(client)
 }
