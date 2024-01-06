@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/tidwall/gjson"
@@ -39,27 +40,48 @@ func Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(client *mongo.Client, CI
 	collectionName := "testMetaDataOf10K10Q"
 	collection := client.Database(databaseName).Collection(collectionName)
 
-	// Use a context with timeout or a background context as needed
+	// Create a context with timeout or a background context as needed
 	ctx := context.Background()
 
-	// Insert or update each meta data record into MongoDB
-	for _, metaData := range metadataSlice {
-		filter := bson.M{"accessionNumber": metaData.AccessionNumber}
-		update := bson.M{"$setOnInsert": metaData}
-		opts := options.Update().SetUpsert(true)
+	var wg sync.WaitGroup
+	errorChannel := make(chan error, len(metadataSlice)) // Buffer error channel to the size of metadataSlice
 
-		_, err := collection.UpdateOne(ctx, filter, update, opts)
+	// Insert or update each meta data record into MongoDB concurrently
+	for _, metaData := range metadataSlice {
+		wg.Add(1)                    // Increment the WaitGroup counter
+		go func(md FilingMetaData) { // Pass metaData as a local variable to the goroutine
+			defer wg.Done() // Decrement the counter when the goroutine completes
+
+			filter := bson.M{"accessionNumber": md.AccessionNumber}
+			update := bson.M{"$setOnInsert": md}
+			opts := options.Update().SetUpsert(true)
+
+			_, err := collection.UpdateOne(ctx, filter, update, opts)
+			if err != nil {
+				errorChannel <- fmt.Errorf("failed to store metadata: %v", err)
+				return
+			}
+		}(metaData)
+	}
+
+	// Wait for all goroutines to complete
+	wg.Wait()
+
+	// Close the error channel as all goroutines have finished
+	close(errorChannel)
+
+	// Check for errors from goroutines
+	for err := range errorChannel {
 		if err != nil {
-			return fmt.Errorf("failed to store metadata: %v", err)
+			return err // Return the first error encountered
 		}
 	}
 
 	fmt.Println("stored metadata to Mongo filingMetaData")
-
 	fmt.Println(time.Since(now))
+
 	return nil
 }
-
 func Get10K10QMetadataFromSubmissionFilesCIK(CIK string) ([]FilingMetaData, error) {
 	submissionFiles, err := GetSubmissionFilesOfCIK(CIK)
 	if err != nil {
