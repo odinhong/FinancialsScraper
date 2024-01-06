@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/tidwall/gjson"
 	"go.mongodb.org/mongo-driver/bson"
@@ -26,9 +27,9 @@ type FilingMetaData struct {
 	Size               string `json:"size"`
 }
 
-// var filingMetaDataCollection *mongo.Collection
-
 func Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(client *mongo.Client, CIK string) error {
+	now := time.Now()
+
 	metadataSlice, err := Get10K10QMetadataFromSubmissionFilesCIK(CIK)
 	if err != nil {
 		return err
@@ -54,6 +55,8 @@ func Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(client *mongo.Client, CI
 	}
 
 	fmt.Println("stored metadata to Mongo filingMetaData")
+
+	fmt.Println(time.Since(now))
 	return nil
 }
 
