@@ -16,25 +16,25 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func CheckAllFilingIndexJsonForExistenceOfFilingSummary(client *mongo.Client) {
-	CIK_slice, accessionNumber_slice, _ := GetListOfFilingsThatHaveNotCheckedExistenceOfFilingSummary(client)
+func CheckAllFilingIndexJsonForExistenceOfFilingSummary(CIK string, client *mongo.Client) {
+	accessionNumber_slice, _ := GetListOfFilingsThatHaveNotCheckedExistenceOfFilingSummary(CIK, client)
 
 	var wg sync.WaitGroup
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
 	batchSize := 10
-	for i := 0; i < len(CIK_slice); i += batchSize {
+	for i := 0; i < len(accessionNumber_slice); i += batchSize {
 		<-ticker.C // wait for the next tick
 		batchEndIndex := i + batchSize
-		if batchEndIndex > len(CIK_slice) {
-			batchEndIndex = len(CIK_slice)
+		if batchEndIndex > len(accessionNumber_slice) {
+			batchEndIndex = len(accessionNumber_slice)
 		}
 		for j := i; j < batchEndIndex; j++ {
 			wg.Add(1)
 			go func(j int) {
 				defer wg.Done()
-				CheckOneFilingIndexJsonForExistenceOfFilingSummary(CIK_slice[j], accessionNumber_slice[j], client)
+				CheckOneFilingIndexJsonForExistenceOfFilingSummary(CIK, accessionNumber_slice[j], client)
 			}(j)
 		}
 		wg.Wait() // wait for the current batch to finish before proceeding to the next batch
@@ -110,7 +110,7 @@ func CheckOneFilingIndexJsonForExistenceOfFilingSummary(CIK string, accessionNum
 	}
 }
 
-func GetListOfFilingsThatHaveNotCheckedExistenceOfFilingSummary(client *mongo.Client) ([]string, []string, error) {
+func GetListOfFilingsThatHaveNotCheckedExistenceOfFilingSummary(CIK string, client *mongo.Client) ([]string, error) {
 	databaseName := "testDatabase"
 	collectionName := "testMetaDataOf10K10Q"
 	collection := client.Database(databaseName).Collection(collectionName)
@@ -125,30 +125,27 @@ func GetListOfFilingsThatHaveNotCheckedExistenceOfFilingSummary(client *mongo.Cl
 	// Perform the query to find all matching documents
 	cursor, err := collection.Find(ctx, filter, options.Find().SetProjection(projection))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer cursor.Close(ctx)
 
 	var accessionNumbers []string // Slice to hold the accession numbers
-	var ciks []string             // Slice to hold the cik values
 
 	// Iterate through the cursor and collect accession numbers and cik values
 	for cursor.Next(ctx) {
 		var result struct {
 			AccessionNumber string `bson:"accessionNumber"`
-			CIK             string `bson:"cik"`
 		}
 		if err := cursor.Decode(&result); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		accessionNumbers = append(accessionNumbers, result.AccessionNumber)
-		ciks = append(ciks, result.CIK)
 	}
 
 	// Check if the cursor encountered any errors during iteration
 	if err := cursor.Err(); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return ciks, accessionNumbers, nil
+	return accessionNumbers, nil
 }

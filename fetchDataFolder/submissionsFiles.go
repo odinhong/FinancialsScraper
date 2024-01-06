@@ -28,7 +28,7 @@ type FilingMetaData struct {
 	Size               string `json:"size"`
 }
 
-func Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(client *mongo.Client, CIK string) error {
+func Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(CIK string, client *mongo.Client) error {
 	metadataSlice, err := Get10K10QMetadataFromSubmissionFilesCIK(CIK)
 	if err != nil {
 		return err

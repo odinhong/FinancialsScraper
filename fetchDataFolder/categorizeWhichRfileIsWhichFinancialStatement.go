@@ -8,7 +8,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func RetrieveCIKAndAccessionNumberThatHaveFilingSummary(client *mongo.Client) ([]string, []string, error) {
+// func GenerateLinksToDownloadFilingSummaryFiles(CIK_slice []string, accessionNumber_slice []string) {
+// 	var filingSummaryUrls []string
+// 	var base string = SEC-files/companyFilingFiles
+// }
+
+func RetrieveCIKAndAccessionNumberThatHaveFilingSummary(CIK string, client *mongo.Client) ([]string, error) {
 	// go to mongodb and get two slice of cik and accessionNumber from those docs that have hasFilingSummary = true
 	var CIK_slice []string
 	var accessionNumber_slice []string
@@ -16,31 +21,29 @@ func RetrieveCIKAndAccessionNumberThatHaveFilingSummary(client *mongo.Client) ([
 	databaseName := "testDatabase"
 	collectionName := "testMetaDataOf10K10Q"
 	collection := client.Database(databaseName).Collection(collectionName)
-	filter := bson.M{"hasFilingSummary": true}
+	filter := bson.M{"hasFilingSummary": true, "cik": CIK}
 
 	ctx := context.TODO()
 	cursor, err := collection.Find(ctx, filter)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer cursor.Close(ctx)
 
 	for cursor.Next(ctx) {
 		var result struct {
-			CIK             string `bson:"cik"`
 			AccessionNumber string `bson:"accessionNumber"`
 		}
 		if err := cursor.Decode(&result); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		CIK_slice = append(CIK_slice, result.CIK)
 		accessionNumber_slice = append(accessionNumber_slice, result.AccessionNumber)
 	}
 
 	if err := cursor.Err(); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	fmt.Println(CIK_slice, accessionNumber_slice)
-	return CIK_slice, accessionNumber_slice, nil
+	return accessionNumber_slice, nil
 }
