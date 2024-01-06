@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/tidwall/gjson"
 	"go.mongodb.org/mongo-driver/bson"
@@ -16,6 +15,7 @@ import (
 )
 
 type FilingMetaData struct {
+	CIK                string `json:"cik"`
 	AccessionNumber    string `json:"accessionNumber"`
 	FilingDate         string `json:"filingDate"`
 	ReportDate         string `json:"reportDate"`
@@ -29,8 +29,6 @@ type FilingMetaData struct {
 }
 
 func Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(client *mongo.Client, CIK string) error {
-	now := time.Now()
-
 	metadataSlice, err := Get10K10QMetadataFromSubmissionFilesCIK(CIK)
 	if err != nil {
 		return err
@@ -78,7 +76,6 @@ func Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(client *mongo.Client, CI
 	}
 
 	fmt.Println("stored metadata to Mongo filingMetaData")
-	fmt.Println(time.Since(now))
 
 	return nil
 }
@@ -89,7 +86,7 @@ func Get10K10QMetadataFromSubmissionFilesCIK(CIK string) ([]FilingMetaData, erro
 	}
 	var metadataSlice []FilingMetaData
 	for _, submissionFile := range submissionFiles {
-		if data, err := Parse10K10QmetadataFromSubmissionJsonFile(submissionFile); err == nil {
+		if data, err := Parse10K10QmetadataFromSubmissionJsonFile(submissionFile, CIK); err == nil {
 			metadataSlice = append(metadataSlice, data...)
 		} else {
 			// Handle the error, e.g., log it or return it
@@ -99,7 +96,7 @@ func Get10K10QMetadataFromSubmissionFilesCIK(CIK string) ([]FilingMetaData, erro
 	return metadataSlice, nil
 }
 
-func Parse10K10QmetadataFromSubmissionJsonFile(filePath string) ([]FilingMetaData, error) {
+func Parse10K10QmetadataFromSubmissionJsonFile(filePath string, CIK string) ([]FilingMetaData, error) {
 	jsonString, err := ReadJsonFile(filePath)
 	if err != nil {
 		err = fmt.Errorf("couldn't read json file %v: %v", filePath, err)
@@ -133,6 +130,7 @@ func Parse10K10QmetadataFromSubmissionJsonFile(filePath string) ([]FilingMetaDat
 	var FilingMetaDatSlice []FilingMetaData
 	for i := 0; i < len(locationsOf10K10Q); i++ {
 		var metaData FilingMetaData
+		metaData.CIK = CIK
 		metaData.AccessionNumber = gjson.Get(jsonString, fmt.Sprintf("%saccessionNumber.%d", prefix, locationsOf10K10Q[i])).String()
 		metaData.FilingDate = gjson.Get(jsonString, fmt.Sprintf("%sfilingDate.%d", prefix, locationsOf10K10Q[i])).String()
 		metaData.ReportDate = gjson.Get(jsonString, fmt.Sprintf("%sreportDate.%d", prefix, locationsOf10K10Q[i])).String()
