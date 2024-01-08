@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	fetchdata "github.com/Programmerdin/FinancialDataSite_Go/fetchDataFolder"
+	categorziefinancialstatements "github.com/Programmerdin/FinancialDataSite_Go/categorizeRfiles"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -48,7 +48,7 @@ func main() {
 	// var KO_CIK string = "0000021344"
 	// var META_CIK string = "0001326801"
 	// var AAPL_CIK string = "0000320193"
-	var SMRT_CIK string = "0001837014"
+	// var SMRT_CIK string = "0001837014"
 	// var SMRT_accessionNumber1 string = "0001104659-21-068286"
 
 	// test, err := fetchdata.GetSubmissionFilesOfCIK(SMRT_CIK)
@@ -78,5 +78,16 @@ func main() {
 
 	// fetchdata.CheckAllFilingIndexJsonForExistenceOfFilingSummary(SMRT_CIK, client)
 
-	fetchdata.RetrieveCIKAndAccessionNumberThatHaveFilingSummary(SMRT_CIK, client)
+	// fetchdata.RetrieveCIKAndAccessionNumberThatHaveFilingSummary(SMRT_CIK, client)
+
+	// fetchdata.DownloadFilingSummaryFiles(SMRT_CIK, client)
+
+	// var SMRT_FilingSummary_Link string = "https://www.sec.gov/Archives/edgar/data/0001837014/000110465921105196/FilingSummary.xml"
+	// var SMRT_FilingSummary_filePath string = "SEC-files\\filingSummaryAndRfiles\\0001837014\\0001104659-21-105196\\FilingSummary.xml"
+	// fetchdata.DownloadOneSECFile(SMRT_FilingSummary_Link, SMRT_FilingSummary_filePath)
+
+	// fetchdata.DownloadFilingSummaryFiles(SMRT_CIK, client)
+
+	var XMLfilePath string = "SEC-files\\filingSummaryAndRfiles\\0001837014\\0000950170-23-006749\\FilingSummary.xml"
+	categorziefinancialstatements.ReadFilingSummaryFile(XMLfilePath)
 }
