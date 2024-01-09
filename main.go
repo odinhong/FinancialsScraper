@@ -6,11 +6,11 @@ import (
 	"log"
 	"os"
 
-	categorziefinancialstatements "github.com/Programmerdin/FinancialDataSite_Go/categorizeRfiles"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	categorizefinancialstatements "github.com/Programmerdin/FinancialDataSite_Go/categorizeRfiles"
 	"github.com/joho/godotenv"
 )
 
@@ -88,6 +88,10 @@ func main() {
 
 	// fetchdata.DownloadFilingSummaryFiles(SMRT_CIK, client)
 
+	// var XMLfilePath string = "SEC-files\\filingSummaryAndRfiles\\0001837014\\0000950170-23-006749\\FilingSummary.xml"
+	// categorziefinancialstatements.PasrseFilingSummaryXMLcontent(XMLfilePath)
+
 	var XMLfilePath string = "SEC-files\\filingSummaryAndRfiles\\0001837014\\0000950170-23-006749\\FilingSummary.xml"
-	categorziefinancialstatements.ReadFilingSummaryFile(XMLfilePath)
+	categorizefinancialstatements.FindRfilesOfFinancialStatementsFromFilingSummaryXML(XMLfilePath)
+
 }
