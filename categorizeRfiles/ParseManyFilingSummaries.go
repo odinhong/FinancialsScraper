@@ -3,6 +3,7 @@ package categorizefinancialstatements
 import (
 	"context"
 	"fmt"
+	"log"
 	"path/filepath"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -10,20 +11,51 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func ParseManyFilingSummaryXmlFilesGivenCIK(CIK string, client *mongo.Client) {
+func ParseManyFilingSummaryXmlFilesAndSaveToMongoGivenCIK(CIK string, client *mongo.Client) {
 	accessionNumbers_slice, err := RetrieveAccessionNumbersThatHaveFilingSummaries(CIK, client)
 	if err != nil {
 		fmt.Println("Error retrieving accession numbers:", err)
 		return
 	}
 
-	var filePathsToFilingSummaryFiles []string
-	//generate local file paths to FilingSummary.xml files
 	for _, accessionNumber := range accessionNumbers_slice {
 		filePath := filepath.Join("SEC-files", "filingSummaryAndRfiles", CIK, accessionNumber, "FilingSummary.xml")
-		filePathsToFilingSummaryFiles = append(filePathsToFilingSummaryFiles, filePath)
+		RfileObjects, err := CategorizeRfilesOfFinancialStatementsFromFilingSummaryXML(filePath)
+		if err != nil {
+			fmt.Println("Error categorizing Rfiles:", err)
+			return
+		}
+		SaveRfileObjectsToMongoDB(CIK, accessionNumber, RfileObjects, client)
+	}
+}
+
+func SaveRfileObjectsToMongoDB(CIK, accessionNumber string, rfileObjects []RfileFinancialStatementObject, client *mongo.Client) {
+	db := client.Database("testDatabase")
+	collection := db.Collection("testMetaDataOf10K10Q")
+	ctx := context.Background()
+	filter := bson.M{
+		"accessionNumber":  accessionNumber,
+		"cik":              CIK,
+		"hasFilingSummary": true,
 	}
 
+	for _, obj := range rfileObjects {
+		if obj.FinancialStatementType != "" {
+			financialStatementType := obj.FinancialStatementType
+			prefix := fmt.Sprintf("Rfile_%s_", financialStatementType)
+			update := bson.M{"$set": bson.M{
+				prefix + "fileName":     obj.FileName,
+				prefix + "longName":     obj.LongName,
+				prefix + "shortName":    obj.ShortName,
+				prefix + "menuCategory": obj.MenuCategory,
+			}}
+
+			if _, err := collection.UpdateOne(ctx, filter, update); err != nil {
+				log.Printf("Error updating %s: %v", financialStatementType, err)
+				return
+			}
+		}
+	}
 }
 
 func RetrieveAccessionNumbersThatHaveFilingSummaries(CIK string, client *mongo.Client) ([]string, error) {

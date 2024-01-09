@@ -6,11 +6,12 @@ import (
 	"log"
 	"os"
 
+	categorizefinancialstatements "github.com/Programmerdin/FinancialDataSite_Go/categorizeRfiles"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	categorizefinancialstatements "github.com/Programmerdin/FinancialDataSite_Go/categorizeRfiles"
 	"github.com/joho/godotenv"
 )
 
@@ -48,7 +49,7 @@ func main() {
 	// var KO_CIK string = "0000021344"
 	// var META_CIK string = "0001326801"
 	// var AAPL_CIK string = "0000320193"
-	// var SMRT_CIK string = "0001837014"
+	var SMRT_CIK string = "0001837014"
 	// var SMRT_accessionNumber1 string = "0001104659-21-068286"
 
 	// test, err := fetchdata.GetSubmissionFilesOfCIK(SMRT_CIK)
@@ -91,7 +92,5 @@ func main() {
 	// var XMLfilePath string = "SEC-files\\filingSummaryAndRfiles\\0001837014\\0000950170-23-006749\\FilingSummary.xml"
 	// categorziefinancialstatements.PasrseFilingSummaryXMLcontent(XMLfilePath)
 
-	var XMLfilePath string = "SEC-files\\filingSummaryAndRfiles\\0001837014\\0000950170-23-006749\\FilingSummary.xml"
-	categorizefinancialstatements.FindRfilesOfFinancialStatementsFromFilingSummaryXML(XMLfilePath)
-
+	categorizefinancialstatements.ParseManyFilingSummaryXmlFilesAndSaveToMongoGivenCIK(SMRT_CIK, client)
 }

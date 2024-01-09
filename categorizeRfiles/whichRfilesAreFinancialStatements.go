@@ -17,14 +17,10 @@ type RfileFinancialStatementObject struct {
 	MenuCategory           string
 }
 
-func SaveRfileFinancialStatementObjectsToMongoDB(objects []RfileFinancialStatementObject) error {
-
-}
-
-func FindRfilesOfFinancialStatementsFromFilingSummaryXML(filePath string) ([]RfileFinancialStatementObject, error) {
+func CategorizeRfilesOfFinancialStatementsFromFilingSummaryXML(filePath string) ([]RfileFinancialStatementObject, error) {
 	XMLdata, err := ReadFilingSummaryXmlFile(filePath)
 	if err != nil {
-		fmt.Printf("error FindRfilesOfFinancialStatementsFromFilingSummaryXML function: %v", err)
+		fmt.Printf("error CategorizeRfilesOfFinancialStatementsFromFilingSummaryXML function: %v", err)
 		return nil, err
 	}
 
@@ -73,8 +69,6 @@ func FindRfilesOfFinancialStatementsFromFilingSummaryXML(filePath string) ([]Rfi
 			if financialStatementTypeFrom1stfilter != "" {
 				confirmationfrom2ndfilter := whichFinancialStatement2ndFilter(longName, financialStatementTypeFrom1stfilter)
 				if confirmationfrom2ndfilter {
-					fmt.Print(financialStatementTypeFrom1stfilter)
-					fmt.Println(confirmationfrom2ndfilter)
 					switch financialStatementTypeFrom1stfilter {
 					case "BS":
 						BS_struct.FinancialStatementType = "BS"
