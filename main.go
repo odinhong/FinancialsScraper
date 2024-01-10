@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	parserfiles "github.com/Programmerdin/FinancialDataSite_Go/parseRfiles"
+	fetchdata "github.com/Programmerdin/FinancialDataSite_Go/fetchDataFolder"
 	"github.com/joho/godotenv"
 )
 
@@ -45,42 +45,17 @@ func main() {
 	}
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
 
-	// var KO_CIK string = "0000021344"
+	var KO_CIK string = "0000021344"
 	// var META_CIK string = "0001326801"
 	// var AAPL_CIK string = "0000320193"
-	var SMRT_CIK string = "0001837014"
+	// var SMRT_CIK string = "0001837014"
 	// var SMRT_accessionNumber1 string = "0001104659-21-068286"
 
-	// test, err := fetchdata.GetSubmissionFilesOfCIK(SMRT_CIK)
-	// fmt.Println(test)
-
-	// test2, err := fetchdata.ReadJsonFile(test[0])
-	// // fmt.Println(test2)
-
-	// test3 := gjson.Get(test2, "filings.recent.accessionNumber")
-	// // fmt.Println(test3)
-	// fmt.Println(reflect.TypeOf(test3))
-
-	// test4 := gjson.Parse(test2)
-	// // fmt.Println(test4)
-	// fmt.Println(reflect.TypeOf(test4))
-
-	// var CIK_submission_filePath string = "SEC-files/submissions/CIK" + SMRT_CIK + ".json"
-	// test5, err := fetchdata.Parse10K10QmetadataFromSubmissionJsonFile(CIK_submission_filePath)
-	// fmt.Println(test5, err)
-
-	// test6, err := fetchdata.Get10K10QMetadataFromSubmissionFilesCIK(SMRT_CIK)
-	// fmt.Println(test6)
-
-	// fetchdata.Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(SMRT_CIK, client)
-
-	// fetchdata.CheckOneFilingIndexJsonForExistenceOfFilingSummary(SMRT_CIK, SMRT_accessionNumber1, client)
+	fetchdata.Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(KO_CIK, client)
 
 	// fetchdata.CheckAllFilingIndexJsonForExistenceOfFilingSummary(SMRT_CIK, client)
 
 	// fetchdata.RetrieveCIKAndAccessionNumberThatHaveFilingSummary(SMRT_CIK, client)
-
-	// fetchdata.DownloadFilingSummaryFiles(SMRT_CIK, client)
 
 	// var SMRT_FilingSummary_Link string = "https://www.sec.gov/Archives/edgar/data/0001837014/000110465921105196/FilingSummary.xml"
 	// var SMRT_FilingSummary_filePath string = "SEC-files\\filingSummaryAndRfiles\\0001837014\\0001104659-21-105196\\FilingSummary.xml"
@@ -93,5 +68,5 @@ func main() {
 
 	// categorizefinancialstatements.ParseManyFilingSummaryXmlFilesAndSaveToMongoGivenCIK(SMRT_CIK, client)
 
-	parserfiles.DownloadRfiles(SMRT_CIK, client)
+	// parserfiles.DownloadRfiles(SMRT_CIK, client)
 }
