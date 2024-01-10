@@ -6,12 +6,11 @@ import (
 	"log"
 	"os"
 
-	categorizefinancialstatements "github.com/Programmerdin/FinancialDataSite_Go/categorizeRfiles"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	parserfiles "github.com/Programmerdin/FinancialDataSite_Go/parseRfiles"
 	"github.com/joho/godotenv"
 )
 
@@ -92,5 +91,7 @@ func main() {
 	// var XMLfilePath string = "SEC-files\\filingSummaryAndRfiles\\0001837014\\0000950170-23-006749\\FilingSummary.xml"
 	// categorziefinancialstatements.PasrseFilingSummaryXMLcontent(XMLfilePath)
 
-	categorizefinancialstatements.ParseManyFilingSummaryXmlFilesAndSaveToMongoGivenCIK(SMRT_CIK, client)
+	// categorizefinancialstatements.ParseManyFilingSummaryXmlFilesAndSaveToMongoGivenCIK(SMRT_CIK, client)
+
+	parserfiles.DownloadRfiles(SMRT_CIK, client)
 }
