@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	fetchdata "github.com/Programmerdin/FinancialDataSite_Go/fetchDataFolder"
+	geteverythinggivencik "github.com/Programmerdin/FinancialDataSite_Go/getEverythingGivenCIK"
 	"github.com/joho/godotenv"
 )
 
@@ -51,7 +51,7 @@ func main() {
 	// var SMRT_CIK string = "0001837014"
 	// var SMRT_accessionNumber1 string = "0001104659-21-068286"
 
-	fetchdata.Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(KO_CIK, client)
+	// fetchdata.Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(KO_CIK, client)
 
 	// fetchdata.CheckAllFilingIndexJsonForExistenceOfFilingSummary(SMRT_CIK, client)
 
@@ -69,4 +69,10 @@ func main() {
 	// categorizefinancialstatements.ParseManyFilingSummaryXmlFilesAndSaveToMongoGivenCIK(SMRT_CIK, client)
 
 	// parserfiles.DownloadRfiles(SMRT_CIK, client)
+
+	// var Smrt_test_accesseionNumber string = "0000950170-22-004604"
+	// var smrt_rfilename string = "R4.htm"
+	// parserfiles.ParseRfileAndSaveAsCSV(SMRT_CIK, Smrt_test_accesseionNumber, smrt_rfilename)
+
+	geteverythinggivencik.GetEverythingGivenCIK(KO_CIK, client)
 }
