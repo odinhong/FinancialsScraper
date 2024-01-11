@@ -37,10 +37,11 @@ func CategorizeRfilesOfFinancialStatementsFromFilingSummaryXML(filePath string) 
 	doesXmlFileNameTagExist := XmlFileNameTagPath.Exists(root)
 	doesShortNameTagExist := ShortNameTagPath.Exists(root)
 
-	doBothHtmlAndXmlExistOrDontExist := (doesHtmlFileNameTagExist && doesXmlFileNameTagExist) || (!doesHtmlFileNameTagExist && !doesXmlFileNameTagExist)
+	doBothHtmlAndXmlDontExist := (!doesHtmlFileNameTagExist && !doesXmlFileNameTagExist)
 	whichFileNameTagToUse := ""
-	if doBothHtmlAndXmlExistOrDontExist {
-		return nil, fmt.Errorf("this FilingSummaryFile has both HtmlFileName and XmlFileName or Don't have either")
+	if doBothHtmlAndXmlDontExist {
+		fmt.Println(filePath)
+		return nil, fmt.Errorf("this FilingSummaryFile has neither HtmlFileName or XmlFileName")
 	} else {
 		if doesHtmlFileNameTagExist {
 			whichFileNameTagToUse = "HtmlFileName"
@@ -106,7 +107,6 @@ func CategorizeRfilesOfFinancialStatementsFromFilingSummaryXML(filePath string) 
 
 					// if all 4 structs are filled then stop the loop
 					if BS_struct.FileName != "" && IS_struct.FileName != "" && CIS_struct.FileName != "" && CF_struct.FileName != "" {
-						fmt.Println("break")
 						break
 					}
 				}
