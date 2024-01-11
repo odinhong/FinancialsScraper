@@ -11,42 +11,14 @@ import (
 	"time"
 )
 
-// func DownloadManySECFiles(downloadLinks []string, filePaths []string) error {
-// 	if len(downloadLinks) != len(filePaths) {
-// 		return errors.New("the length of downloadLinks and filePaths must match")
-// 	}
-
-// 	// A channel to limit the number of concurrent goroutines
-// 	semaphore := make(chan struct{}, 10)
-
-// 	var wg sync.WaitGroup
-// 	for i := 0; i < len(downloadLinks); i++ {
-// 		wg.Add(1)
-// 		go func(link, path string) {
-// 			defer wg.Done()
-// 			// Acquire a token
-// 			semaphore <- struct{}{}
-// 			// Ensure the token is released after this function finishes
-// 			defer func() { <-semaphore }()
-// 			// Call the download function
-// 			if err := DownloadOneSECFile(link, path); err != nil {
-// 				fmt.Println("Error downloading file:", err)
-// 			}
-// 		}(downloadLinks[i], filePaths[i])
-// 	}
-
-//		// Wait for all downloads to finish
-//		wg.Wait()
-//		return nil
-//	}
 func DownloadManySECFiles(downloadLinks []string, filePaths []string) error {
 	if len(downloadLinks) != len(filePaths) {
 		return errors.New("the length of downloadLinks and filePaths must match")
 	}
 
 	var wg sync.WaitGroup
-	ticker := time.NewTicker(1 * time.Second) // Ticker that fires every second
-	defer ticker.Stop()                       // Stop the ticker to release associated resources
+	ticker := time.NewTicker(1001 * time.Millisecond) // Ticker that fires every 1.001 second (if i do 1second it fks with SEC API limit)
+	defer ticker.Stop()                               // Stop the ticker to release associated resources
 
 	batchSize := 10 // Number of files to download per second
 	for i := 0; i < len(downloadLinks); i += batchSize {
