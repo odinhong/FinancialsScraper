@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	parserfiles "github.com/Programmerdin/FinancialDataSite_Go/parseRfiles"
+	geteverythinggivencik "github.com/Programmerdin/FinancialDataSite_Go/getEverythingGivenCIK"
 	"github.com/joho/godotenv"
 )
 
@@ -74,9 +74,9 @@ func main() {
 	// var smrt_rfilename string = "R4.htm"
 	// parserfiles.ParseRfileAndSaveAsCSV(SMRT_CIK, Smrt_test_accesseionNumber, smrt_rfilename)
 
-	var KO_test_accessionNumber string = "0000021344-17-000026"
-	var ko_rfilename string = "R2.htm"
-	parserfiles.ParseOneRfileAndSaveAsCSV(KO_CIK, KO_test_accessionNumber, ko_rfilename)
+	// var KO_test_accessionNumber string = "0000021344-17-000026"
+	// var ko_rfilename string = "R2.htm"
+	// parserfiles.ParseOneRfileAndSaveAsCSV(KO_CIK, KO_test_accessionNumber, ko_rfilename)
 
-	// geteverythinggivencik.GetEverythingGivenCIK(KO_CIK, client)
+	geteverythinggivencik.GetEverythingGivenCIK(KO_CIK, client)
 }
