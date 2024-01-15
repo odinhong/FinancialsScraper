@@ -11,6 +11,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/antchfx/xmlquery"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type StatementData struct {
@@ -18,7 +19,35 @@ type StatementData struct {
 	Data    [][]string
 }
 
-func ParseRfileAndSaveAsCSV(CIK, accessionNumber, RfileName string) error {
+func ParseManyRfilesAndSaveAsCSVs(CIK string, client *mongo.Client) {
+	accesionNumbers, Rfilenames, err := RetrieveRfileNamesAndAccessionNumbersFromMongoDB(CIK, client)
+	if err != nil {
+		fmt.Println("Error RetrieveRfileNamesAndAccessionNumbersFromMongoDB function:", err)
+		return
+	}
+
+	var accessionNumbers_to_parse []string
+	var Rfilenames_to_parse []string
+	for i := 0; i < len(accesionNumbers); i++ {
+		RfileName_CSV := Rfilenames[i]
+		ext := filepath.Ext(Rfilenames[i])
+		if ext == ".htm" || ext == ".html" || ext == ".xml" {
+			RfileName_CSV = strings.TrimSuffix(Rfilenames[i], ext) + ".csv"
+		}
+		filePath := filepath.Join("SEC-files", "filingSummaryAndRfiles", CIK, accesionNumbers[i], RfileName_CSV)
+
+		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			accessionNumbers_to_parse = append(accessionNumbers_to_parse, accesionNumbers[i])
+			Rfilenames_to_parse = append(Rfilenames_to_parse, Rfilenames[i])
+		}
+	}
+
+	for i := 0; i < len(accessionNumbers_to_parse); i++ {
+		ParseOneRfileAndSaveAsCSV(CIK, accessionNumbers_to_parse[i], Rfilenames_to_parse[i])
+	}
+}
+
+func ParseOneRfileAndSaveAsCSV(CIK, accessionNumber, RfileName string) error {
 	//check if RfileName is .htm or .html or .xml
 	fileExt := filepath.Ext(RfileName)
 
@@ -30,6 +59,7 @@ func ParseRfileAndSaveAsCSV(CIK, accessionNumber, RfileName string) error {
 	switch fileExt {
 	case ".htm", ".html":
 		parsedRfile, err = ParseHtmRfile(CIK, accessionNumber, RfileName)
+		fmt.Println(parsedRfile)
 		if err != nil {
 			fmt.Println(err)
 			return err
@@ -42,9 +72,9 @@ func ParseRfileAndSaveAsCSV(CIK, accessionNumber, RfileName string) error {
 		}
 	}
 
-	CleanParsedRfile(&parsedRfile)
-	fmt.Println(parsedRfile)
-	err = saveParsedRfileAsCSV(&parsedRfile, CIK, accessionNumber, RfileName)
+	cleanParsedRfile := CleanParsedRfile(&parsedRfile)
+
+	err = saveParsedRfileAsCSV(&cleanParsedRfile, CIK, accessionNumber, RfileName)
 	if err != nil {
 		log.Fatalf("Failed to save CSV: %v", err)
 		return err
@@ -260,7 +290,160 @@ func ParseXmlRfile(CIK, accessionNumber, RfileName string) (StatementData, error
 }
 
 // CleanParsedRfile cleans the provided StatementData
-func CleanParsedRfile(statementData *StatementData) *StatementData {
+// func CleanParsedRfile(statementData *StatementData) *StatementData {
+// 	var statementDataArray [][]string
+
+// 	// Convert headers and data to one single slice
+// 	statementDataArray = append(statementDataArray, statementData.Headers...)
+// 	statementDataArray = append(statementDataArray, statementData.Data...)
+
+// 	// Go through every cell and replace cells that contain unwanted characters with empty strings
+// 	unwantedCharacters := []string{"[", "]"}
+// 	for i := range statementDataArray {
+// 		for j := range statementDataArray[i] {
+// 			for _, unwantedChar := range unwantedCharacters {
+// 				if strings.Contains(statementDataArray[i][j], unwantedChar) {
+// 					statementDataArray[i][j] = ""
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	// Remove columns that are all empty strings
+// 	colShortlist := make([]int, 0)
+// 	for i := range statementDataArray {
+// 		if i == 0 {
+// 			for j := range statementDataArray[i] {
+// 				if statementDataArray[i][j] == "" {
+// 					colShortlist = append(colShortlist, j)
+// 				}
+// 			}
+// 		} else {
+// 			for k := len(colShortlist) - 1; k >= 0; k-- {
+// 				if statementDataArray[i][colShortlist[k]] != "" {
+// 					colShortlist = append(colShortlist[:k], colShortlist[k+1:]...)
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	for i := range statementDataArray {
+// 		for _, colIndex := range colShortlist {
+// 			statementDataArray[i] = append(statementDataArray[i][:colIndex], statementDataArray[i][colIndex+1:]...)
+// 		}
+// 	}
+
+// 	// Duplicate some cells into empty string cells that arose from colspan
+// 	for i := 0; i < 3 && i < len(statementDataArray); i++ {
+// 		for j := 1; j < len(statementDataArray[i]); j++ {
+// 			if statementDataArray[i][j] == "" {
+// 				statementDataArray[i][j] = statementDataArray[i][j-1]
+// 			}
+// 		}
+// 	}
+
+// 	// Rearrange array into headers and data format
+// 	statementDataClean := &StatementData{
+// 		Headers: make([][]string, len(statementData.Headers)),
+// 		Data:    make([][]string, len(statementDataArray)-len(statementData.Headers)),
+// 	}
+
+// 	copy(statementDataClean.Headers, statementDataArray[:len(statementData.Headers)])
+// 	copy(statementDataClean.Data, statementDataArray[len(statementData.Headers):])
+
+//		return statementDataClean
+//	}
+
+// func CleanParsedRfile(statementData *StatementData) *StatementData {
+// 	var statementDataArray [][]string
+
+// 	// Convert headers and data to one single slice
+// 	statementDataArray = append(statementDataArray, statementData.Headers...)
+// 	statementDataArray = append(statementDataArray, statementData.Data...)
+
+// 	// Go through every cell and replace cells that contain unwanted characters with empty strings
+// 	unwantedCharacters := []string{"[", "]"}
+// 	for i := range statementDataArray {
+// 		for j := range statementDataArray[i] {
+// 			for _, unwantedChar := range unwantedCharacters {
+// 				if strings.Contains(statementDataArray[i][j], unwantedChar) {
+// 					statementDataArray[i][j] = ""
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	// Remove columns that are all empty strings
+// 	colShortlist := make([]int, 0)
+
+// 	// Initialize a slice to keep track of empty column status for each column
+// 	isEmptyColumn := make([]bool, len(statementDataArray[0]))
+// 	for j := range isEmptyColumn {
+// 		isEmptyColumn[j] = true // Start by assuming all columns are empty
+// 	}
+
+// 	// Iterate over all rows to check if the column is actually empty
+// 	for _, row := range statementDataArray {
+// 		for colIndex, cell := range row {
+// 			if cell != "" {
+// 				isEmptyColumn[colIndex] = false
+// 			}
+// 		}
+// 	}
+
+// 	// Add the index of empty columns to colShortlist
+// 	for colIndex, empty := range isEmptyColumn {
+// 		if empty {
+// 			colShortlist = append(colShortlist, colIndex)
+// 		}
+// 	}
+
+// 	// Sort colShortlist in descending order to remove columns from right to left
+// 	sort.Slice(colShortlist, func(i, j int) bool {
+// 		return colShortlist[i] > colShortlist[j]
+// 	})
+
+// 	// Remove columns from statementDataArray
+// 	for _, colIndex := range colShortlist {
+// 		for i := range statementDataArray {
+// 			// Remove the column if the index is valid
+// 			if colIndex < len(statementDataArray[i]) {
+// 				statementDataArray[i] = append(statementDataArray[i][:colIndex], statementDataArray[i][colIndex+1:]...)
+// 			}
+// 		}
+// 	}
+
+// 	// Remove columns in reverse order to not affect the indexing of yet-to-be-processed columns
+// 	for i := range statementDataArray {
+// 		for _, colIndex := range colShortlist {
+// 			if colIndex < len(statementDataArray[i]) {
+// 				statementDataArray[i] = append(statementDataArray[i][:colIndex], statementDataArray[i][colIndex+1:]...)
+// 			}
+// 		}
+// 	}
+
+// 	// Duplicate some cells into empty string cells that arose from colspan
+// 	for i := 0; i < 3 && i < len(statementDataArray); i++ {
+// 		for j := 1; j < len(statementDataArray[i]); j++ {
+// 			if statementDataArray[i][j] == "" {
+// 				statementDataArray[i][j] = statementDataArray[i][j-1]
+// 			}
+// 		}
+// 	}
+
+// 	// Rearrange array into headers and data format
+// 	statementDataClean := &StatementData{
+// 		Headers: make([][]string, len(statementData.Headers)),
+// 		Data:    make([][]string, len(statementDataArray)-len(statementData.Headers)),
+// 	}
+
+// 	copy(statementDataClean.Headers, statementDataArray[:len(statementData.Headers)])
+// 	copy(statementDataClean.Data, statementDataArray[len(statementData.Headers):])
+
+// 	return statementDataClean
+// }
+
+func CleanParsedRfile(statementData *StatementData) StatementData {
 	var statementDataArray [][]string
 
 	// Convert headers and data to one single slice
@@ -279,29 +462,27 @@ func CleanParsedRfile(statementData *StatementData) *StatementData {
 		}
 	}
 
-	// Remove columns that are all empty strings
-	colShortlist := make([]int, 0)
+	//make a slice of index numbers of cols of statementDataArray
+	colIndexShortlist := make([]int, len(statementDataArray[0]))
+	for i := range colIndexShortlist {
+		colIndexShortlist[i] = i
+	}
+
+	//Remove col from colIndexShortlist if col is not empty
 	for i := range statementDataArray {
-		if i == 0 {
-			for j := range statementDataArray[i] {
-				if statementDataArray[i][j] == "" {
-					colShortlist = append(colShortlist, j)
-				}
-			}
-		} else {
-			for k := len(colShortlist) - 1; k >= 0; k-- {
-				if statementDataArray[i][colShortlist[k]] != "" {
-					colShortlist = append(colShortlist[:k], colShortlist[k+1:]...)
+		for _, value := range colIndexShortlist {
+			if statementDataArray[i][value] != "" {
+				//find value in colIndexShortlist slice and remove it
+				ColToRemove := indexOf(colIndexShortlist, value)
+				if ColToRemove != -1 {
+					colIndexShortlist = append(colIndexShortlist[:ColToRemove], colIndexShortlist[ColToRemove+1:]...)
 				}
 			}
 		}
 	}
 
-	for i := range statementDataArray {
-		for _, colIndex := range colShortlist {
-			statementDataArray[i] = append(statementDataArray[i][:colIndex], statementDataArray[i][colIndex+1:]...)
-		}
-	}
+	//Remove the col from statementDataArray
+	statementDataArray = removeColumns(statementDataArray, colIndexShortlist)
 
 	// Duplicate some cells into empty string cells that arose from colspan
 	for i := 0; i < 3 && i < len(statementDataArray); i++ {
@@ -313,7 +494,7 @@ func CleanParsedRfile(statementData *StatementData) *StatementData {
 	}
 
 	// Rearrange array into headers and data format
-	statementDataClean := &StatementData{
+	statementDataClean := StatementData{
 		Headers: make([][]string, len(statementData.Headers)),
 		Data:    make([][]string, len(statementDataArray)-len(statementData.Headers)),
 	}
@@ -394,4 +575,35 @@ func escapeCsvCell(cell string, isDataCell bool, isFirstColumn bool) string {
 	}
 
 	return cellString
+}
+
+func indexOf(slice []int, value int) int {
+	for i, v := range slice {
+		if v == value {
+			return i // Found the value, return the index
+		}
+	}
+	return -1 // Value not found, return -1
+}
+
+func removeColumns(arr [][]string, columnsToDelete []int) [][]string {
+	// Create a map for faster lookups
+	deleteMap := make(map[int]bool)
+	for _, col := range columnsToDelete {
+		deleteMap[col] = true
+	}
+
+	// Build a new 2D slice without the deleted columns
+	newArr := make([][]string, len(arr))
+	for i, row := range arr {
+		newRow := []string{}
+		for j, elem := range row {
+			if !deleteMap[j] {
+				newRow = append(newRow, elem)
+			}
+		}
+		newArr[i] = newRow
+	}
+
+	return newArr
 }

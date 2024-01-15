@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	geteverythinggivencik "github.com/Programmerdin/FinancialDataSite_Go/getEverythingGivenCIK"
+	parserfiles "github.com/Programmerdin/FinancialDataSite_Go/parseRfiles"
 	"github.com/joho/godotenv"
 )
 
@@ -45,9 +45,9 @@ func main() {
 	}
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
 
-	// var KO_CIK string = "0000021344"
+	var KO_CIK string = "0000021344"
 	// var META_CIK string = "0001326801"
-	var AAPL_CIK string = "0000320193"
+	// var AAPL_CIK string = "0000320193"
 	// var SMRT_CIK string = "0001837014"
 	// var SMRT_accessionNumber1 string = "0001104659-21-068286"
 
@@ -74,5 +74,9 @@ func main() {
 	// var smrt_rfilename string = "R4.htm"
 	// parserfiles.ParseRfileAndSaveAsCSV(SMRT_CIK, Smrt_test_accesseionNumber, smrt_rfilename)
 
-	geteverythinggivencik.GetEverythingGivenCIK(AAPL_CIK, client)
+	var KO_test_accessionNumber string = "0000021344-17-000026"
+	var ko_rfilename string = "R2.htm"
+	parserfiles.ParseOneRfileAndSaveAsCSV(KO_CIK, KO_test_accessionNumber, ko_rfilename)
+
+	// geteverythinggivencik.GetEverythingGivenCIK(KO_CIK, client)
 }
