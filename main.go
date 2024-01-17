@@ -74,9 +74,9 @@ func main() {
 	// var smrt_rfilename string = "R4.htm"
 	// parserfiles.ParseRfileAndSaveAsCSV(SMRT_CIK, Smrt_test_accesseionNumber, smrt_rfilename)
 
-	// var KO_test_accessionNumber string = "0000021344-17-000026"
-	// var ko_rfilename string = "R2.htm"
-	// parserfiles.ParseOneRfileAndSaveAsCSV(KO_CIK, KO_test_accessionNumber, ko_rfilename)
+	// var KO_test_accessionNumber string = "0001047469-10-004416"
+	// var ko_rfilename string = "R1.xml"
+	// parserfiles.ParseXmlRfile(KO_CIK, KO_test_accessionNumber, ko_rfilename)
 
 	geteverythinggivencik.GetEverythingGivenCIK(KO_CIK, client)
 }

@@ -1,6 +1,7 @@
 package parserfiles
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -59,7 +60,6 @@ func ParseOneRfileAndSaveAsCSV(CIK, accessionNumber, RfileName string) error {
 	switch fileExt {
 	case ".htm", ".html":
 		parsedRfile, err = ParseHtmRfile(CIK, accessionNumber, RfileName)
-		fmt.Println(parsedRfile)
 		if err != nil {
 			fmt.Println(err)
 			return err
@@ -221,73 +221,206 @@ func ParseXmlRfile(CIK, accessionNumber, RfileName string) (StatementData, error
 		Headers: [][]string{},
 		Data:    [][]string{},
 	}
-	filePath := filepath.Join("SEC-files/companyFilingFiles", CIK, accessionNumber, RfileName)
+	filePath := filepath.Join("SEC-files/filingSummaryAndRfiles", CIK, accessionNumber, RfileName)
 	xmlBytes, err := os.ReadFile(filePath)
 	if err != nil {
+		// handle error
 		return statementData, err
 	}
 
-	doc, err := xmlquery.Parse(strings.NewReader(string(xmlBytes)))
+	doc, err := xmlquery.Parse(bytes.NewReader(xmlBytes))
 	if err != nil {
+		// handle error
 		return statementData, err
 	}
 
-	// Iterate over each <Column> element
-	labelArrays := [][]string{}
-	columns := xmlquery.Find(doc, "//Column")
-	for _, column := range columns {
-		labels := xmlquery.Find(column, "Label")
-		for i, label := range labels {
-			text := label.SelectAttr("Label")
-			for len(labelArrays) <= i {
-				labelArrays = append(labelArrays, []string{})
+	//Set up the correct number of inner slices needed for headers
+	// XPath query to find all Label elements within the first Labels element
+	firstLabelsNode := xmlquery.FindOne(doc, "//Labels[1]")
+	firstLabelslabelNodes := xmlquery.Find(firstLabelsNode, "./Label")
+
+	for i := 0; i < len(firstLabelslabelNodes); i++ {
+		if i == 0 {
+			ReportName := xmlquery.FindOne(doc, "//ReportName")
+			if ReportName == nil { //use ReportLongName if ReportName doesn't exist
+				ReportName = xmlquery.FindOne(doc, "//ReportLongName")
 			}
-			labelArrays[i] = append(labelArrays[i], text)
+			statementData.Headers = append(statementData.Headers, []string{ReportName.InnerText()}) //empty string for first element to account for the fact that dates don't have a line item name
+		} else {
+			statementData.Headers = append(statementData.Headers, []string{""}) //empty string for first element to account for the fact that dates don't have a line item name
 		}
 	}
 
-	statementData.Headers = append(statementData.Headers, labelArrays...)
+	// XPath query to find all Label elements within Labels
+	//This is grabbing dates and the 6 months ended
+	labelNodes := xmlquery.Find(doc, "//Labels/Label")
+	for _, labelNode := range labelNodes {
+		// Get the value of the 'Label' attribute
+		labelText := labelNode.SelectAttr("Label")
+		labelId := labelNode.SelectAttr("Id")
 
-	// Find <ReportName> or <ReportLongName> element and add it to headers[0][0]
-	reportName := xmlquery.FindOne(doc, "//ReportName")
-	reportLongName := xmlquery.FindOne(doc, "//ReportLongName")
-	if reportName != nil {
-		statementData.Headers[0] = append([]string{reportName.InnerText()}, statementData.Headers[0]...)
-	} else if reportLongName != nil {
-		statementData.Headers[0] = append([]string{reportLongName.InnerText()}, statementData.Headers[0]...)
-	}
-
-	// Add empty cells to beginning of each headers array
-	for i := 1; i < len(statementData.Headers); i++ {
-		statementData.Headers[i] = append([]string{""}, statementData.Headers[i]...)
-	}
-
-	// Iterate over each <Row> element
-	rows := xmlquery.Find(doc, "//Row")
-	for _, row := range rows {
-		rowData := []string{}
-		elementName := xmlquery.FindOne(row, "ElementName").InnerText()
-		rowData = append(rowData, elementName)
-		cells := xmlquery.Find(row, "Cell")
-		for _, cell := range cells {
-			numericAmount := xmlquery.FindOne(cell, "NumericAmount").InnerText()
-			rowData = append(rowData, numericAmount)
+		if labelId == "1" {
+			statementData.Headers[0] = append(statementData.Headers[0], labelText)
 		}
-		statementData.Data = append(statementData.Data, rowData)
+		if labelId == "2" {
+			statementData.Headers[1] = append(statementData.Headers[1], labelText)
+		}
+	}
+
+	//Set up the correct number of inner slices needed for statementData.Data
+	RowNodes := xmlquery.Find(doc, "//Rows/Row")
+	rowCount := len(RowNodes)
+	for i := 0; i < rowCount; i++ {
+		statementData.Data = append(statementData.Data, []string{})
+	}
+	//Add line item names
+	RowLabelNodes := xmlquery.Find(doc, "//Rows/Row/Label")
+	for i := 0; i < len(RowLabelNodes); i++ {
+		statementData.Data[i] = append(statementData.Data[i], RowLabelNodes[i].InnerText())
+	}
+
+	//How many cells per row excluding name of the line item (aka Label)
+	CellNodes := xmlquery.Find(doc, "//Rows/Row[2]/Cells/Cell")
+	cellCount := len(CellNodes)
+	//Get NumericAmount of each Cell
+	NumericAmountNodes := xmlquery.Find(doc, "//Rows/Row/Cells/Cell/NumericAmount")
+	//Add cell data next to line item name
+	for i := 0; i < rowCount; i++ {
+		for j := 0; j < cellCount; j++ {
+			statementData.Data[i] = append(statementData.Data[i], NumericAmountNodes[i*cellCount+j].InnerText())
+		}
+	}
+
+	// Deal with first Data row that sometimes is the name of the financial statement
+	FirstDataRowElement := statementData.Data[0][0]
+	FirstDataRowElementClean := strings.ToLower(strings.ReplaceAll(FirstDataRowElement, " ", ""))
+	ReportNametest := statementData.Headers[0][0]
+	ReportNameClean := strings.ToLower(strings.ReplaceAll(ReportNametest, " ", ""))
+	check := strings.Contains(ReportNameClean, FirstDataRowElementClean)
+	if check {
+		//remove first row of statementData.Data
+		statementData.Data = statementData.Data[1:]
+	}
+
+	//Deal with CURRENT ASSET and CURRENT LIABILITY rows
+	for i := len(statementData.Data) - 1; i >= 0; i-- {
+		// Assume that the row is only made up of "0" or "" apart from the first element
+		rowIsOnly0OrEmpty := true
+
+		// Start from the second element (index 1)
+		for j := 1; j < cellCount+1; j++ {
+			cell := statementData.Data[i][j]
+			if cell != "0" && cell != "" {
+				// If a cell is not "0" or "", set the flag to false and break
+				rowIsOnly0OrEmpty = false
+				break
+			}
+		}
+
+		// If the flag is still true, the row is only made up of "0" or "" apart from the first element
+		if rowIsOnly0OrEmpty {
+			//replace row with empty string except for first element
+			for j := 1; j < cellCount+1; j++ {
+				statementData.Data[i][j] = ""
+			}
+		}
 	}
 
 	// Remove rows that are abstract rows in statementData.Data
-	for i := 0; i < len(statementData.Data); i++ {
+	for i := len(statementData.Data) - 1; i >= 0; i-- {
 		isLineItemAbstract := strings.Contains(statementData.Data[i][0], "Abstract")
 		isLineItem0OrEmpty := statementData.Data[i][1] == "0" || statementData.Data[i][1] == ""
 		if isLineItemAbstract && isLineItem0OrEmpty {
 			statementData.Data = append(statementData.Data[:i], statementData.Data[i+1:]...)
-			i--
 		}
 	}
 
 	return statementData, nil
 }
+
+// func ParseXmlRfile(CIK, accessionNumber, RfileName string) (StatementData, error) {
+// 	statementData := StatementData{
+// 		Headers: [][]string{},
+// 		Data:    [][]string{},
+// 	}
+// 	filePath := filepath.Join("SEC-files/filingSummaryAndRfiles", CIK, accessionNumber, RfileName)
+// 	xmlBytes, err := os.ReadFile(filePath)
+// 	if err != nil {
+// 		return statementData, err
+// 	}
+
+// 	doc, err := xmlquery.Parse(strings.NewReader(string(xmlBytes)))
+// 	if err != nil {
+// 		return statementData, err
+// 	}
+
+// 	// Iterate over each <Column> element
+// 	labelArrays := [][]string{}
+// 	columns := xmlquery.Find(doc, "//Column")
+// 	for _, column := range columns {
+// 		labels := xmlquery.Find(column, "Label")
+// 		fmt.Println(labels)
+// 		for i, label := range labels {
+// 			text := label.SelectAttr("Label")
+// 			for len(labelArrays) <= i {
+// 				labelArrays = append(labelArrays, []string{})
+// 			}
+// 			labelArrays[i] = append(labelArrays[i], text)
+// 		}
+// 	}
+// 	statementData.Headers = append(statementData.Headers, labelArrays...)
+
+// 	if len(statementData.Headers) == 0 {
+// 		statementData.Headers = append(statementData.Headers, []string{})
+// 	}
+
+// 	// Find <ReportName> or <ReportLongName> element and add it to headers[0][0]
+// 	reportName := xmlquery.FindOne(doc, "//ReportName")
+// 	fmt.Println(reportName)
+// 	reportLongName := xmlquery.FindOne(doc, "//ReportLongName")
+// 	if reportName != nil {
+// 		statementData.Headers[0] = append([]string{reportName.InnerText()}, statementData.Headers[0]...)
+// 	} else if reportLongName != nil {
+// 		statementData.Headers[0] = append([]string{reportLongName.InnerText()}, statementData.Headers[0]...)
+// 	}
+
+// 	// Add empty cells to beginning of each headers array
+// 	for i := 1; i < len(statementData.Headers); i++ {
+// 		statementData.Headers[i] = append([]string{""}, statementData.Headers[i]...)
+// 	}
+
+// 	fmt.Println(statementData.Headers)
+
+// 	// Iterate over each <Row> element
+// 	rows := xmlquery.Find(doc, "//Row")
+// 	for _, row := range rows {
+// 		rowData := []string{}
+// 		elementName := xmlquery.FindOne(row, "ElementName").InnerText()
+// 		rowData = append(rowData, elementName)
+// 		cells := xmlquery.Find(row, "Cell")
+// 		for _, cell := range cells {
+// 			numericAmount := xmlquery.FindOne(cell, "NumericAmount").InnerText()
+// 			rowData = append(rowData, numericAmount)
+// 		}
+// 		statementData.Data = append(statementData.Data, rowData)
+// 	}
+
+// 	if len(statementData.Data) == 0 {
+// 		statementData.Data = append(statementData.Data, []string{})
+// 	}
+
+// 	// Remove rows that are abstract rows in statementData.Data
+// 	for i := 0; i < len(statementData.Data); i++ {
+// 		isLineItemAbstract := strings.Contains(statementData.Data[i][0], "Abstract")
+// 		isLineItem0OrEmpty := statementData.Data[i][1] == "0" || statementData.Data[i][1] == ""
+// 		if isLineItemAbstract && isLineItem0OrEmpty {
+// 			statementData.Data = append(statementData.Data[:i], statementData.Data[i+1:]...)
+// 			i--
+// 		}
+// 	}
+
+// 	return statementData, nil
+// }
 
 func CleanParsedRfile(statementData *StatementData) StatementData {
 	var statementDataArray [][]string
@@ -330,12 +463,18 @@ func CleanParsedRfile(statementData *StatementData) StatementData {
 	//Remove the col from statementDataArray
 	statementDataArray = removeColumns(statementDataArray, colIndexShortlist)
 
-	// Duplicate some cells into empty string cells that arose from colspan
-	for i := 0; i < 3 && i < len(statementDataArray); i++ {
-		for j := 1; j < len(statementDataArray[i]); j++ {
-			if statementDataArray[i][j] == "" {
-				statementDataArray[i][j] = statementDataArray[i][j-1]
-			}
+	// // Duplicate some cells into empty string cells that arose from colspan
+	// for i := 0; i < 3 && i < len(statementDataArray); i++ {
+	// 	for j := 1; j < len(statementDataArray[i]); j++ {
+	// 		if statementDataArray[i][j] == "" {
+	// 			statementDataArray[i][j] = statementDataArray[i][j-1]
+	// 		}
+	// 	}
+	// }
+	// Duplicate top cells (3 months ended 6 months ended cells) into empty string cells that arose from colspan
+	for j := 1; j < len(statementDataArray[0]); j++ {
+		if statementDataArray[0][j] == "" {
+			statementDataArray[0][j] = statementDataArray[0][j-1]
 		}
 	}
 
