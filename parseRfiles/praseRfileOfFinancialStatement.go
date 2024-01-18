@@ -338,90 +338,6 @@ func ParseXmlRfile(CIK, accessionNumber, RfileName string) (StatementData, error
 	return statementData, nil
 }
 
-// func ParseXmlRfile(CIK, accessionNumber, RfileName string) (StatementData, error) {
-// 	statementData := StatementData{
-// 		Headers: [][]string{},
-// 		Data:    [][]string{},
-// 	}
-// 	filePath := filepath.Join("SEC-files/filingSummaryAndRfiles", CIK, accessionNumber, RfileName)
-// 	xmlBytes, err := os.ReadFile(filePath)
-// 	if err != nil {
-// 		return statementData, err
-// 	}
-
-// 	doc, err := xmlquery.Parse(strings.NewReader(string(xmlBytes)))
-// 	if err != nil {
-// 		return statementData, err
-// 	}
-
-// 	// Iterate over each <Column> element
-// 	labelArrays := [][]string{}
-// 	columns := xmlquery.Find(doc, "//Column")
-// 	for _, column := range columns {
-// 		labels := xmlquery.Find(column, "Label")
-// 		fmt.Println(labels)
-// 		for i, label := range labels {
-// 			text := label.SelectAttr("Label")
-// 			for len(labelArrays) <= i {
-// 				labelArrays = append(labelArrays, []string{})
-// 			}
-// 			labelArrays[i] = append(labelArrays[i], text)
-// 		}
-// 	}
-// 	statementData.Headers = append(statementData.Headers, labelArrays...)
-
-// 	if len(statementData.Headers) == 0 {
-// 		statementData.Headers = append(statementData.Headers, []string{})
-// 	}
-
-// 	// Find <ReportName> or <ReportLongName> element and add it to headers[0][0]
-// 	reportName := xmlquery.FindOne(doc, "//ReportName")
-// 	fmt.Println(reportName)
-// 	reportLongName := xmlquery.FindOne(doc, "//ReportLongName")
-// 	if reportName != nil {
-// 		statementData.Headers[0] = append([]string{reportName.InnerText()}, statementData.Headers[0]...)
-// 	} else if reportLongName != nil {
-// 		statementData.Headers[0] = append([]string{reportLongName.InnerText()}, statementData.Headers[0]...)
-// 	}
-
-// 	// Add empty cells to beginning of each headers array
-// 	for i := 1; i < len(statementData.Headers); i++ {
-// 		statementData.Headers[i] = append([]string{""}, statementData.Headers[i]...)
-// 	}
-
-// 	fmt.Println(statementData.Headers)
-
-// 	// Iterate over each <Row> element
-// 	rows := xmlquery.Find(doc, "//Row")
-// 	for _, row := range rows {
-// 		rowData := []string{}
-// 		elementName := xmlquery.FindOne(row, "ElementName").InnerText()
-// 		rowData = append(rowData, elementName)
-// 		cells := xmlquery.Find(row, "Cell")
-// 		for _, cell := range cells {
-// 			numericAmount := xmlquery.FindOne(cell, "NumericAmount").InnerText()
-// 			rowData = append(rowData, numericAmount)
-// 		}
-// 		statementData.Data = append(statementData.Data, rowData)
-// 	}
-
-// 	if len(statementData.Data) == 0 {
-// 		statementData.Data = append(statementData.Data, []string{})
-// 	}
-
-// 	// Remove rows that are abstract rows in statementData.Data
-// 	for i := 0; i < len(statementData.Data); i++ {
-// 		isLineItemAbstract := strings.Contains(statementData.Data[i][0], "Abstract")
-// 		isLineItem0OrEmpty := statementData.Data[i][1] == "0" || statementData.Data[i][1] == ""
-// 		if isLineItemAbstract && isLineItem0OrEmpty {
-// 			statementData.Data = append(statementData.Data[:i], statementData.Data[i+1:]...)
-// 			i--
-// 		}
-// 	}
-
-// 	return statementData, nil
-// }
-
 func CleanParsedRfile(statementData *StatementData) StatementData {
 	var statementDataArray [][]string
 
@@ -463,14 +379,6 @@ func CleanParsedRfile(statementData *StatementData) StatementData {
 	//Remove the col from statementDataArray
 	statementDataArray = removeColumns(statementDataArray, colIndexShortlist)
 
-	// // Duplicate some cells into empty string cells that arose from colspan
-	// for i := 0; i < 3 && i < len(statementDataArray); i++ {
-	// 	for j := 1; j < len(statementDataArray[i]); j++ {
-	// 		if statementDataArray[i][j] == "" {
-	// 			statementDataArray[i][j] = statementDataArray[i][j-1]
-	// 		}
-	// 	}
-	// }
 	// Duplicate top cells (3 months ended 6 months ended cells) into empty string cells that arose from colspan
 	for j := 1; j < len(statementDataArray[0]); j++ {
 		if statementDataArray[0][j] == "" {
@@ -486,6 +394,9 @@ func CleanParsedRfile(statementData *StatementData) StatementData {
 
 	copy(statementDataClean.Headers, statementDataArray[:len(statementData.Headers)])
 	copy(statementDataClean.Data, statementDataArray[len(statementData.Headers):])
+
+	//add an empty row at the end of statementDataClean.Headers to separate the headers from the data
+	statementDataClean.Headers = append(statementDataClean.Headers, []string{})
 
 	return statementDataClean
 }
