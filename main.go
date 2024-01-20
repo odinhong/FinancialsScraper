@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	geteverythinggivencik "github.com/Programmerdin/FinancialDataSite_Go/getEverythingGivenCIK"
+	combinecsvfiles "github.com/Programmerdin/FinancialDataSite_Go/combineCSVfiles"
 	"github.com/joho/godotenv"
 )
 
@@ -78,5 +78,8 @@ func main() {
 	// var ko_rfilename string = "R1.xml"
 	// parserfiles.ParseXmlRfile(KO_CIK, KO_test_accessionNumber, ko_rfilename)
 
-	geteverythinggivencik.GetEverythingGivenCIK(KO_CIK, client)
+	//SEC-files/filingSummaryAndRfiles/0000021344/0000021344-21-000014
+
+	combinecsvfiles.RetrieveFinancialStatementMetaDataDocsOldestToNewestReportingDate(KO_CIK, client)
+	// geteverythinggivencik.GetEverythingGivenCIK(KO_CIK, client)
 }
