@@ -56,8 +56,9 @@ func GenerateDownloadLinksAndFilePathsForRfiles(CIK string, accessionNumbers []s
 }
 
 func RetrieveRfileNamesAndAccessionNumbersFromMongoDB(CIK string, client *mongo.Client) ([]string, []string, error) {
-	db := client.Database("testDatabase")
-	collection := db.Collection("testMetaDataOf10K10Q")
+	databaseName := os.Getenv("DATABASE_NAME")
+	collectionName := os.Getenv("COLLECTION_NAME")
+	collection := client.Database(databaseName).Collection(collectionName)
 	ctx := context.Background()
 	filter := bson.M{
 		"cik":               CIK,
@@ -65,7 +66,7 @@ func RetrieveRfileNamesAndAccessionNumbersFromMongoDB(CIK string, client *mongo.
 		"Rfile_BS_fileName": bson.M{"$exists": true},
 	}
 	projection := bson.M{
-		"accessionNumber":    1,
+		"accessionnumber":    1,
 		"Rfile_BS_fileName":  1,
 		"Rfile_IS_fileName":  1,
 		"Rfile_CIS_fileName": 1,
@@ -90,19 +91,19 @@ func RetrieveRfileNamesAndAccessionNumbersFromMongoDB(CIK string, client *mongo.
 		// Collect file names and accessionNumbers if they exist in the document
 		if fileName, ok := doc["Rfile_BS_fileName"].(string); ok {
 			RfileNames = append(RfileNames, fileName)
-			accessionNumbers = append(accessionNumbers, doc["accessionNumber"].(string))
+			accessionNumbers = append(accessionNumbers, doc["accessionnumber"].(string))
 		}
 		if fileName, ok := doc["Rfile_IS_fileName"].(string); ok {
 			RfileNames = append(RfileNames, fileName)
-			accessionNumbers = append(accessionNumbers, doc["accessionNumber"].(string))
+			accessionNumbers = append(accessionNumbers, doc["accessionnumber"].(string))
 		}
 		if fileName, ok := doc["Rfile_CIS_fileName"].(string); ok {
 			RfileNames = append(RfileNames, fileName)
-			accessionNumbers = append(accessionNumbers, doc["accessionNumber"].(string))
+			accessionNumbers = append(accessionNumbers, doc["accessionnumber"].(string))
 		}
 		if fileName, ok := doc["Rfile_CF_fileName"].(string); ok {
 			RfileNames = append(RfileNames, fileName)
-			accessionNumbers = append(accessionNumbers, doc["accessionNumber"].(string))
+			accessionNumbers = append(accessionNumbers, doc["accessionnumber"].(string))
 		}
 	}
 

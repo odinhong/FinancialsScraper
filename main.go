@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	combinecsvfiles "github.com/Programmerdin/FinancialDataSite_Go/combineCSVfiles"
+	geteverythinggivencik "github.com/Programmerdin/FinancialDataSite_Go/getEverythingGivenCIK"
 	"github.com/joho/godotenv"
 )
 
@@ -45,10 +45,10 @@ func main() {
 	}
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
 
-	var KO_CIK string = "0000021344"
+	// var KO_CIK string = "0000021344"
 	// var META_CIK string = "0001326801"
 	// var AAPL_CIK string = "0000320193"
-	// var SMRT_CIK string = "0001837014"
+	var SMRT_CIK string = "0001837014"
 	// var SMRT_accessionNumber1 string = "0001104659-21-068286"
 
 	// fetchdata.Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(KO_CIK, client)
@@ -80,6 +80,6 @@ func main() {
 
 	//SEC-files/filingSummaryAndRfiles/0000021344/0000021344-21-000014
 
-	combinecsvfiles.RetrieveFinancialStatementMetaDataDocsOldestToNewestReportingDate(KO_CIK, client)
-	// geteverythinggivencik.GetEverythingGivenCIK(KO_CIK, client)
+	// combinecsvfiles.RetrieveFinancialStatementMetaDataDocsOldestToNewestReportingDate(KO_CIK, client)
+	geteverythinggivencik.GetEverythingGivenCIK(SMRT_CIK, client)
 }

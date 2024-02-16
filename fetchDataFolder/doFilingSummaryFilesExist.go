@@ -86,11 +86,11 @@ func CheckOneFilingIndexJsonForExistenceOfFilingSummary(CIK string, accessionNum
 		return true // Continue iterating
 	})
 
-	databaseName := "testDatabase"
-	collectionName := "testMetaDataOf10K10Q"
+	databaseName := os.Getenv("DATABASE_NAME")
+	collectionName := os.Getenv("COLLECTION_NAME")
 	collection := client.Database(databaseName).Collection(collectionName)
 	ctx := context.Background()
-	filter := bson.M{"accessionNumber": accessionNumber, "cik": CIK}
+	filter := bson.M{"accessionnumber": accessionNumber, "cik": CIK}
 
 	// Output the result and update the 'hasFilingSummary' field to Mongo
 	if hasFilingSummary {
@@ -111,13 +111,15 @@ func CheckOneFilingIndexJsonForExistenceOfFilingSummary(CIK string, accessionNum
 }
 
 func GetListOfFilingsThatHaveNotCheckedExistenceOfFilingSummary(CIK string, client *mongo.Client) ([]string, error) {
-	databaseName := "testDatabase"
-	collectionName := "testMetaDataOf10K10Q"
+	databaseName := os.Getenv("DATABASE_NAME")
+	collectionName := os.Getenv("COLLECTION_NAME")
+	// databaseName := "testDatabase"
+	// collectionName := "testMetaDataOf10K10Q"
 	collection := client.Database(databaseName).Collection(collectionName)
 
 	// Create a filter to find documents where 'hasFilingSummary' does not exist
 	filter := bson.M{"hasFilingSummary": bson.M{"$exists": false}}
-	projection := bson.M{"accessionNumber": 1, "cik": 1, "_id": 0} // Project only the accessionNumber and cik fields
+	projection := bson.M{"accessionnumber": 1, "cik": 1, "_id": 0} // Project only the accessionNumber and cik fields
 
 	// Use a context with timeout or a background context as needed
 	ctx := context.Background()
@@ -134,7 +136,7 @@ func GetListOfFilingsThatHaveNotCheckedExistenceOfFilingSummary(CIK string, clie
 	// Iterate through the cursor and collect accession numbers and cik values
 	for cursor.Next(ctx) {
 		var result struct {
-			AccessionNumber string `bson:"accessionNumber"`
+			AccessionNumber string `bson:"accessionnumber"`
 		}
 		if err := cursor.Decode(&result); err != nil {
 			return nil, err

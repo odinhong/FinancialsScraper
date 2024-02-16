@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -11,8 +12,8 @@ import (
 )
 
 func RetrieveFinancialStatementMetaDataDocsOldestToNewestReportingDate(CIK string, client *mongo.Client) {
-	databaseName := "testDatabase"
-	collectionName := "testMetaDataOf10K10Q"
+	databaseName := os.Getenv("DATABASE_NAME")
+	collectionName := os.Getenv("COLLECTION_NAME")
 	collection := client.Database(databaseName).Collection(collectionName)
 
 	// Finding multiple documents with the specified CIK and Sorting by reportdate in ascending order and filtering by CIK

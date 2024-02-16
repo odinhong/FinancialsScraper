@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -30,11 +31,13 @@ func ParseManyFilingSummaryXmlFilesAndSaveToMongoGivenCIK(CIK string, client *mo
 }
 
 func SaveRfileObjectsToMongoDB(CIK, accessionNumber string, rfileObjects []RfileFinancialStatementObject, client *mongo.Client) {
-	db := client.Database("testDatabase")
-	collection := db.Collection("testMetaDataOf10K10Q")
+	databaseName := os.Getenv("DATABASE_NAME")
+	collectionName := os.Getenv("COLLECTION_NAME")
+	db := client.Database(databaseName)
+	collection := db.Collection(collectionName)
 	ctx := context.Background()
 	filter := bson.M{
-		"accessionNumber":  accessionNumber,
+		"accessionnumber":  accessionNumber,
 		"cik":              CIK,
 		"hasFilingSummary": true,
 	}
@@ -59,12 +62,14 @@ func SaveRfileObjectsToMongoDB(CIK, accessionNumber string, rfileObjects []Rfile
 }
 
 func RetrieveAccessionNumbersThatHaveFilingSummaries(CIK string, client *mongo.Client) ([]string, error) {
-	databaseName := "testDatabase"
-	collectionName := "testMetaDataOf10K10Q"
+	databaseName := os.Getenv("DATABASE_NAME")
+	collectionName := os.Getenv("COLLECTION_NAME")
+	// databaseName := "testDatabase"
+	// collectionName := "testMetaDataOf10K10Q"
 	collection := client.Database(databaseName).Collection(collectionName)
 
 	filter := bson.M{"hasFilingSummary": true, "cik": CIK}
-	projection := bson.M{"accessionNumber": 1, "_id": 0} // Project only the accessionNumber
+	projection := bson.M{"accessionnumber": 1, "_id": 0} // Project only the accessionNumber
 
 	// Use a context with timeout or a background context as needed
 	ctx := context.Background()
@@ -81,7 +86,7 @@ func RetrieveAccessionNumbersThatHaveFilingSummaries(CIK string, client *mongo.C
 	// Iterate through the cursor and collect accession numbers and cik values
 	for cursor.Next(ctx) {
 		var result struct {
-			AccessionNumber string `bson:"accessionNumber"`
+			AccessionNumber string `bson:"accessionnumber"`
 		}
 		if err := cursor.Decode(&result); err != nil {
 			return nil, err

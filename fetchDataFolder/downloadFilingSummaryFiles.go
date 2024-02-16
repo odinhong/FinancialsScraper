@@ -56,8 +56,10 @@ func RetrieveAccessionNumbersThatHaveFilingSummary(CIK string, client *mongo.Cli
 	// go to mongodb and get slice of accessionNumber from those docs that have hasFilingSummary = true
 	var accessionNumber_slice []string
 
-	databaseName := "testDatabase"
-	collectionName := "testMetaDataOf10K10Q"
+	databaseName := os.Getenv("DATABASE_NAME")
+	collectionName := os.Getenv("COLLECTION_NAME")
+	// databaseName := "testDatabase"
+	// collectionName := "testMetaDataOf10K10Q"
 	collection := client.Database(databaseName).Collection(collectionName)
 	filter := bson.M{"hasFilingSummary": true, "cik": CIK}
 
@@ -70,7 +72,7 @@ func RetrieveAccessionNumbersThatHaveFilingSummary(CIK string, client *mongo.Cli
 
 	for cursor.Next(ctx) {
 		var result struct {
-			AccessionNumber string `bson:"accessionNumber"`
+			AccessionNumber string `bson:"accessionnumber"`
 		}
 		if err := cursor.Decode(&result); err != nil {
 			return nil, err

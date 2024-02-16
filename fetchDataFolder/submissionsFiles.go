@@ -16,14 +16,14 @@ import (
 
 type FilingMetaData struct {
 	CIK                string `json:"cik"`
-	AccessionNumber    string `json:"accessionNumber"`
-	FilingDate         string `json:"filingDate"`
-	ReportDate         string `json:"reportDate"`
-	AcceptanceDateTime string `json:"acceptanceDateTime"`
+	AccessionNumber    string `json:"accessionnumber"`
+	FilingDate         string `json:"filingdate"`
+	ReportDate         string `json:"reportdate"`
+	AcceptanceDateTime string `json:"acceptancedatetime"`
 	Act                string `json:"act"`
 	Form               string `json:"form"`
-	FileNumber         string `json:"fileNumber"`
-	FilmNumber         string `json:"filmNumber"`
+	FileNumber         string `json:"filenumber"`
+	FilmNumber         string `json:"filmnumber"`
 	Items              string `json:"items"`
 	Size               string `json:"size"`
 }
@@ -33,9 +33,12 @@ func Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(CIK string, client *mong
 	if err != nil {
 		return err
 	}
+	// fmt.Println("metadataSlice:", metadataSlice)
 
-	databaseName := "testDatabase"
-	collectionName := "testMetaDataOf10K10Q"
+	databaseName := os.Getenv("DATABASE_NAME")
+	collectionName := os.Getenv("COLLECTION_NAME")
+	// databaseName := "testDatabase"
+	// collectionName := "testMetaDataOf10K10Q"
 	collection := client.Database(databaseName).Collection(collectionName)
 
 	// Create a context with timeout or a background context as needed
@@ -50,7 +53,7 @@ func Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(CIK string, client *mong
 		go func(md FilingMetaData) { // Pass metaData as a local variable to the goroutine
 			defer wg.Done() // Decrement the counter when the goroutine completes
 
-			filter := bson.M{"accessionNumber": md.AccessionNumber}
+			filter := bson.M{"accessionnumber": md.AccessionNumber}
 			update := bson.M{"$setOnInsert": md}
 			opts := options.Update().SetUpsert(true)
 
@@ -144,6 +147,7 @@ func Parse10K10QmetadataFromSubmissionJsonFile(filePath string, CIK string) ([]F
 
 		FilingMetaDatSlice = append(FilingMetaDatSlice, metaData)
 	}
+	fmt.Println(FilingMetaDatSlice)
 
 	return FilingMetaDatSlice, nil
 }
