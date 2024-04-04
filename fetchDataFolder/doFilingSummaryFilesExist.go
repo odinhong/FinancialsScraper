@@ -113,8 +113,6 @@ func CheckOneFilingIndexJsonForExistenceOfFilingSummary(CIK string, accessionNum
 func GetListOfFilingsThatHaveNotCheckedExistenceOfFilingSummary(CIK string, client *mongo.Client) ([]string, error) {
 	databaseName := os.Getenv("DATABASE_NAME")
 	collectionName := os.Getenv("COLLECTION_NAME")
-	// databaseName := "testDatabase"
-	// collectionName := "testMetaDataOf10K10Q"
 	collection := client.Database(databaseName).Collection(collectionName)
 
 	// Create a filter to find documents where 'hasFilingSummary' does not exist

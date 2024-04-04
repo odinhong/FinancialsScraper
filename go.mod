@@ -7,6 +7,7 @@ require (
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/antchfx/xmlquery v1.3.18 // indirect
 	github.com/antchfx/xpath v1.2.4 // indirect
+	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
