@@ -29,7 +29,7 @@ type FilingMetaData struct {
 }
 
 func Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(CIK string, client *mongo.Client) error {
-	metadataSlice, err := Get10K10QMetadataFromSubmissionFilesCIK(CIK)
+	metadataSlice, err := Get10K10QMetadataFromSubmissionFilesGivenCIK(CIK)
 	if err != nil {
 		return err
 	}
@@ -82,14 +82,15 @@ func Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(CIK string, client *mong
 
 	return nil
 }
-func Get10K10QMetadataFromSubmissionFilesCIK(CIK string) ([]FilingMetaData, error) {
-	submissionFiles, err := GetSubmissionFilesOfCIK(CIK)
+
+func Get10K10QMetadataFromSubmissionFilesGivenCIK(CIK string) ([]FilingMetaData, error) {
+	submissionFilePaths, err := FindSubmissionFilesGivenCIK(CIK)
 	if err != nil {
 		return nil, err
 	}
 	var metadataSlice []FilingMetaData
-	for _, submissionFile := range submissionFiles {
-		if data, err := Parse10K10QmetadataFromSubmissionJsonFile(submissionFile, CIK); err == nil {
+	for _, submissionFilePath := range submissionFilePaths {
+		if data, err := Extract10K10QmetadataFromSubmissionFile(submissionFilePath, CIK); err == nil {
 			metadataSlice = append(metadataSlice, data...)
 		} else {
 			// Handle the error, e.g., log it or return it
@@ -99,7 +100,26 @@ func Get10K10QMetadataFromSubmissionFilesCIK(CIK string) ([]FilingMetaData, erro
 	return metadataSlice, nil
 }
 
-func Parse10K10QmetadataFromSubmissionJsonFile(filePath string, CIK string) ([]FilingMetaData, error) {
+// Extract10K10QmetadataFromSubmissionFile processes a submission JSON file and extracts metadata
+// for 10-K and 10-Q filings. It handles two types of JSON structures:
+// 1. Recent filings JSON (uses "filings.recent." prefix)
+// 2. Submissions JSON (uses no prefix)
+//
+// Parameters:
+//   - filePath: Path to the JSON file containing SEC filing metadata
+//   - CIK: Company Identifier Key for the company
+//
+// Returns:
+//   - []FilingMetaData: Slice of metadata for all 10-K and 10-Q filings found
+//   - error: Any error encountered during processing
+//
+// The function performs the following steps:
+// 1. Reads and validates the JSON file
+// 2. Determines the JSON structure type (recent filings vs submissions)
+// 3. Finds all 10-K and 10-Q filings in the JSON
+// 4. Extracts metadata for each filing (dates, numbers, etc.)
+func Extract10K10QmetadataFromSubmissionFile(filePath string, CIK string) ([]FilingMetaData, error) {
+	// Read and validate JSON file
 	jsonString, err := ReadJsonFile(filePath)
 	if err != nil {
 		err = fmt.Errorf("couldn't read json file %v: %v", filePath, err)
@@ -110,41 +130,48 @@ func Parse10K10QmetadataFromSubmissionJsonFile(filePath string, CIK string) ([]F
 		return nil, err
 	}
 
+	// Determine JSON structure type and set appropriate prefix
 	var fileName string = filepath.Base(filePath)
 	var doesFileNameIncludeSubmissions bool = strings.Contains(fileName, "submissions")
-
 	var prefix string = "filings.recent."
 	if doesFileNameIncludeSubmissions {
 		prefix = ""
 	}
 
-	var locationsOf10K10Q []int
+	// Find indices of all 10-K and 10-Q filings in the JSON
+	var IndiciesOf10K10Q []int
 	listOfForms := gjson.Get(jsonString, prefix+"form")
 	listOfForms.ForEach(func(key, value gjson.Result) bool {
 		index := int(key.Int())
 		form := value.String()
 
 		if form == "10-K" || form == "10-Q" {
-			locationsOf10K10Q = append(locationsOf10K10Q, index)
+			IndiciesOf10K10Q = append(IndiciesOf10K10Q, index)
 		}
 		return true // Continue iterating over all items
 	})
 
+	// Extract metadata for each 10-K and 10-Q filing
 	var FilingMetaDatSlice []FilingMetaData
-	for i := 0; i < len(locationsOf10K10Q); i++ {
+	for i := 0; i < len(IndiciesOf10K10Q); i++ {
+		// Create new metadata object for each filing
 		var metaData FilingMetaData
 		metaData.CIK = CIK
-		metaData.AccessionNumber = gjson.Get(jsonString, fmt.Sprintf("%saccessionNumber.%d", prefix, locationsOf10K10Q[i])).String()
-		metaData.FilingDate = gjson.Get(jsonString, fmt.Sprintf("%sfilingDate.%d", prefix, locationsOf10K10Q[i])).String()
-		metaData.ReportDate = gjson.Get(jsonString, fmt.Sprintf("%sreportDate.%d", prefix, locationsOf10K10Q[i])).String()
-		metaData.AcceptanceDateTime = gjson.Get(jsonString, fmt.Sprintf("%sacceptanceDateTime.%d", prefix, locationsOf10K10Q[i])).String()
-		metaData.Act = gjson.Get(jsonString, fmt.Sprintf("%sact.%d", prefix, locationsOf10K10Q[i])).String()
-		metaData.Form = gjson.Get(jsonString, fmt.Sprintf("%sform.%d", prefix, locationsOf10K10Q[i])).String()
-		metaData.FileNumber = gjson.Get(jsonString, fmt.Sprintf("%sfileNumber.%d", prefix, locationsOf10K10Q[i])).String()
-		metaData.FilmNumber = gjson.Get(jsonString, fmt.Sprintf("%sfilmNumber.%d", prefix, locationsOf10K10Q[i])).String()
-		metaData.Items = gjson.Get(jsonString, fmt.Sprintf("%sitems.%d", prefix, locationsOf10K10Q[i])).String()
-		metaData.Size = gjson.Get(jsonString, fmt.Sprintf("%ssize.%d", prefix, locationsOf10K10Q[i])).String()
 
+		// Extract all metadata fields using the filing's index
+		// Each field is accessed using the appropriate JSON path with prefix
+		metaData.AccessionNumber = gjson.Get(jsonString, fmt.Sprintf("%saccessionNumber.%d", prefix, IndiciesOf10K10Q[i])).String()
+		metaData.FilingDate = gjson.Get(jsonString, fmt.Sprintf("%sfilingDate.%d", prefix, IndiciesOf10K10Q[i])).String()
+		metaData.ReportDate = gjson.Get(jsonString, fmt.Sprintf("%sreportDate.%d", prefix, IndiciesOf10K10Q[i])).String()
+		metaData.AcceptanceDateTime = gjson.Get(jsonString, fmt.Sprintf("%sacceptanceDateTime.%d", prefix, IndiciesOf10K10Q[i])).String()
+		metaData.Act = gjson.Get(jsonString, fmt.Sprintf("%sact.%d", prefix, IndiciesOf10K10Q[i])).String()
+		metaData.Form = gjson.Get(jsonString, fmt.Sprintf("%sform.%d", prefix, IndiciesOf10K10Q[i])).String()
+		metaData.FileNumber = gjson.Get(jsonString, fmt.Sprintf("%sfileNumber.%d", prefix, IndiciesOf10K10Q[i])).String()
+		metaData.FilmNumber = gjson.Get(jsonString, fmt.Sprintf("%sfilmNumber.%d", prefix, IndiciesOf10K10Q[i])).String()
+		metaData.Items = gjson.Get(jsonString, fmt.Sprintf("%sitems.%d", prefix, IndiciesOf10K10Q[i])).String()
+		metaData.Size = gjson.Get(jsonString, fmt.Sprintf("%ssize.%d", prefix, IndiciesOf10K10Q[i])).String()
+
+		// Add the metadata to our collection
 		FilingMetaDatSlice = append(FilingMetaDatSlice, metaData)
 	}
 	fmt.Println(FilingMetaDatSlice)
@@ -155,7 +182,7 @@ func Parse10K10QmetadataFromSubmissionJsonFile(filePath string, CIK string) ([]F
 // GetSubmissionFilesOfCIK returns a list of submission files for a given CIK
 // the submission files need to be downloaded from SEC (https://www.sec.gov/search-filings/edgar-application-programming-interfaces)
 // This function generates a list of all the submission files for a given CIK
-func FindSubmissionFiles(CIK string) (submissionFilePaths []string, err error) {
+func FindSubmissionFilesGivenCIK(CIK string) (submissionFilePaths []string, err error) {
 	var submissionFiles []string
 	// baseDirectory := "SEC-files/submissions"
 	baseDirectory := filepath.Join("SEC-files", "submissions")
