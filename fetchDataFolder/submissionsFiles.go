@@ -152,7 +152,10 @@ func Parse10K10QmetadataFromSubmissionJsonFile(filePath string, CIK string) ([]F
 	return FilingMetaDatSlice, nil
 }
 
-func GetSubmissionFilesOfCIK(CIK string) ([]string, error) {
+// GetSubmissionFilesOfCIK returns a list of submission files for a given CIK
+// the submission files need to be downloaded from SEC (https://www.sec.gov/search-filings/edgar-application-programming-interfaces)
+// This function generates a list of all the submission files for a given CIK
+func FindSubmissionFiles(CIK string) (submissionFilePaths []string, err error) {
 	var submissionFiles []string
 	// baseDirectory := "SEC-files/submissions"
 	baseDirectory := filepath.Join("SEC-files", "submissions")
