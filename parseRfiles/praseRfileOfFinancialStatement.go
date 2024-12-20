@@ -44,11 +44,11 @@ func ParseManyRfilesAndSaveAsCSVs(CIK string, client *mongo.Client) {
 	}
 
 	for i := 0; i < len(accessionNumbers_to_parse); i++ {
-		ParseOneRfileAndSaveAsCSV(CIK, accessionNumbers_to_parse[i], Rfilenames_to_parse[i])
+		ParseRfileAndSaveAsCSV(CIK, accessionNumbers_to_parse[i], Rfilenames_to_parse[i])
 	}
 }
 
-func ParseOneRfileAndSaveAsCSV(CIK, accessionNumber, RfileName string) error {
+func ParseRfileAndSaveAsCSV(CIK, accessionNumber, RfileName string) error {
 	//check if RfileName is .htm or .html or .xml
 	fileExt := filepath.Ext(RfileName)
 

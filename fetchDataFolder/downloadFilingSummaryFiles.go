@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	utilityfunctions "github.com/Programmerdin/FinancialDataSite_Go/utilityFunctions"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -56,11 +57,7 @@ func RetrieveAccessionNumbersThatHaveFilingSummary(CIK string, client *mongo.Cli
 	// go to mongodb and get slice of accessionNumber from those docs that have hasFilingSummary = true
 	var accessionNumber_slice []string
 
-	databaseName := os.Getenv("DATABASE_NAME")
-	collectionName := os.Getenv("COLLECTION_NAME")
-	// databaseName := "testDatabase"
-	// collectionName := "testMetaDataOf10K10Q"
-	collection := client.Database(databaseName).Collection(collectionName)
+	collection := utilityfunctions.GetMongoDBCollection(client)
 	filter := bson.M{"hasFilingSummary": true, "cik": CIK}
 
 	ctx := context.TODO()
