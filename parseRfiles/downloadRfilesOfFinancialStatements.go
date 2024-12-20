@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	fetchdata "github.com/Programmerdin/FinancialDataSite_Go/fetchDataFolder"
+	utilityfunctions "github.com/Programmerdin/FinancialDataSite_Go/utilityFunctions"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -56,9 +57,7 @@ func GenerateDownloadLinksAndFilePathsForRfiles(CIK string, accessionNumbers []s
 }
 
 func RetrieveRfileNamesAndAccessionNumbersFromMongoDB(CIK string, client *mongo.Client) ([]string, []string, error) {
-	databaseName := os.Getenv("DATABASE_NAME")
-	collectionName := os.Getenv("COLLECTION_NAME")
-	collection := client.Database(databaseName).Collection(collectionName)
+	collection := utilityfunctions.GetMongoDBCollection(client)
 	ctx := context.Background()
 	filter := bson.M{
 		"cik":               CIK,

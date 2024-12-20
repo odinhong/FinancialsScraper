@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	utilityfunctions "github.com/Programmerdin/FinancialDataSite_Go/utilityFunctions"
 	"github.com/tidwall/gjson"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -35,11 +36,7 @@ func Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(CIK string, client *mong
 	}
 	// fmt.Println("metadataSlice:", metadataSlice)
 
-	databaseName := os.Getenv("DATABASE_NAME")
-	collectionName := os.Getenv("COLLECTION_NAME")
-	// databaseName := "testDatabase"
-	// collectionName := "testMetaDataOf10K10Q"
-	collection := client.Database(databaseName).Collection(collectionName)
+	collection := utilityfunctions.GetMongoDBCollection(client)
 
 	// Create a context with timeout or a background context as needed
 	ctx := context.Background()

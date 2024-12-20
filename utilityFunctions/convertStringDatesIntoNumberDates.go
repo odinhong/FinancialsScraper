@@ -8,7 +8,7 @@ import (
 )
 
 // convert string dates like  Oct. 1, 2021 to number dates like 20211001
-func ConvertStringDatesIntoIntNumberDates(dateString string) int {
+func ConvertStringDatesIntoIntNumberDatesYYYYMMDD(dateString string) int {
 	ParsedDate, err := dateparse.ParseStrict(dateString)
 	if err != nil {
 		fmt.Println("Could not parse date:", dateString)
