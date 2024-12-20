@@ -17,7 +17,7 @@ func DownloadManySECFiles(downloadLinks []string, filePaths []string) error {
 	}
 
 	var wg sync.WaitGroup
-	ticker := time.NewTicker(1001 * time.Millisecond) // Ticker that fires every 1.001 second (if i do 1second it fks with SEC API limit)
+	ticker := time.NewTicker(1010 * time.Millisecond) // Ticker that fires every 1.010 second (if i do 1second it fks with SEC API limit)
 	defer ticker.Stop()                               // Stop the ticker to release associated resources
 
 	batchSize := 10 // Number of files to download per second
