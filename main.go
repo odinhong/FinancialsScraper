@@ -11,7 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	geteverythinggivencik "github.com/Programmerdin/FinancialDataSite_Go/getEverythingGivenCIK"
-	utilityfunctions "github.com/Programmerdin/FinancialDataSite_Go/utilityFunctions"
+	// utilityfunctions "github.com/Programmerdin/FinancialDataSite_Go/utilityFunctions"
 	"github.com/joho/godotenv"
 )
 
@@ -84,5 +84,5 @@ func main() {
 	// combinecsvfiles.GetCSVfilepathsInOrder(SMRT_CIK, client)
 	geteverythinggivencik.GetEverythingGivenCIK(META_CIK, client)
 	// combinecsvfiles.Tester(SMRT_CIK, client)
-	utilityfunctions.ConvertStringDatesIntoIntNumberDates("Sep. 30, 2011")
+	// utilityfunctions.ConvertStringDatesIntoIntNumberDates("Sep. 30, 2011")
 }

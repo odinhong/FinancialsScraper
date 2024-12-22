@@ -7,7 +7,7 @@ import (
 )
 
 // GetCollection returns a MongoDB collection using environment variables
-func GetCollection(client *mongo.Client) *mongo.Collection {
+func GetMongoDBCollection(client *mongo.Client) *mongo.Collection {
 	databaseName := os.Getenv("DATABASE_NAME")
 	collectionName := os.Getenv("COLLECTION_NAME")
 	return client.Database(databaseName).Collection(collectionName)

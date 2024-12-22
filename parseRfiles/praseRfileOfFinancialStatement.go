@@ -72,7 +72,7 @@ func ParseRfileAndSaveAsCSV(CIK, accessionNumber, RfileName string) error {
 		}
 	}
 
-	cleanParsedRfile := CleanParsedRfile(&parsedRfile)
+	cleanParsedRfile := CleanParsedRfile(&parsedRfile, accessionNumber)
 
 	err = saveParsedRfileAsCSV(&cleanParsedRfile, CIK, accessionNumber, RfileName)
 	if err != nil {
@@ -338,7 +338,7 @@ func ParseXmlRfile(CIK, accessionNumber, RfileName string) (StatementData, error
 	return statementData, nil
 }
 
-func CleanParsedRfile(statementData *StatementData) StatementData {
+func CleanParsedRfile(statementData *StatementData, accessionNumber string) StatementData {
 	var statementDataArray [][]string
 
 	// Convert headers and data to one single slice
@@ -397,6 +397,14 @@ func CleanParsedRfile(statementData *StatementData) StatementData {
 
 	//add an empty row at the end of statementDataClean.Headers to separate the headers from the data
 	statementDataClean.Headers = append(statementDataClean.Headers, []string{})
+
+	// Create and add accession number row at the very top of headers
+	accessionRow := make([]string, len(statementDataClean.Headers[0]))
+	accessionRow[0] = "accessionNumber"
+	for i := 1; i < len(accessionRow); i++ {
+		accessionRow[i] = accessionNumber
+	}
+	statementDataClean.Headers = append([][]string{accessionRow}, statementDataClean.Headers...)
 
 	return statementDataClean
 }
