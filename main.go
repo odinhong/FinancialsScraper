@@ -10,8 +10,8 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	geteverythinggivencik "github.com/Programmerdin/FinancialDataSite_Go/getEverythingGivenCIK"
 	// utilityfunctions "github.com/Programmerdin/FinancialDataSite_Go/utilityFunctions"
+	geteverythinggivencik "github.com/Programmerdin/FinancialDataSite_Go/getEverythingGivenCIK"
 	"github.com/joho/godotenv"
 )
 
@@ -52,37 +52,7 @@ func main() {
 	// var SMRT_CIK string = "0001837014"
 	// var SMRT_accessionNumber1 string = "0001104659-21-068286"
 
-	// fetchdata.Store10K10QmetadataFromSubmissionFilesCIKtoMongoDB(KO_CIK, client)
-
-	// fetchdata.CheckAllFilingIndexJsonForExistenceOfFilingSummary(SMRT_CIK, client)
-
-	// fetchdata.RetrieveCIKAndAccessionNumberThatHaveFilingSummary(SMRT_CIK, client)
-
-	// var SMRT_FilingSummary_Link string = "https://www.sec.gov/Archives/edgar/data/0001837014/000110465921105196/FilingSummary.xml"
-	// var SMRT_FilingSummary_filePath string = "SEC-files\\filingSummaryAndRfiles\\0001837014\\0001104659-21-105196\\FilingSummary.xml"
-	// fetchdata.DownloadOneSECFile(SMRT_FilingSummary_Link, SMRT_FilingSummary_filePath)
-
-	// fetchdata.DownloadFilingSummaryFiles(SMRT_CIK, client)
-
-	// var XMLfilePath string = "SEC-files\\filingSummaryAndRfiles\\0001837014\\0000950170-23-006749\\FilingSummary.xml"
-	// categorziefinancialstatements.PasrseFilingSummaryXMLcontent(XMLfilePath)
-
-	// categorizefinancialstatements.ParseManyFilingSummaryXmlFilesAndSaveToMongoGivenCIK(SMRT_CIK, client)
-
-	// parserfiles.DownloadRfiles(SMRT_CIK, client)
-
-	// var Smrt_test_accesseionNumber string = "0000950170-22-004604"
-	// var smrt_rfilename string = "R4.htm"
-	// parserfiles.ParseRfileAndSaveAsCSV(SMRT_CIK, Smrt_test_accesseionNumber, smrt_rfilename)
-
-	// var KO_test_accessionNumber string = "0001047469-10-004416"
-	// var ko_rfilename string = "R1.xml"
-	// parserfiles.ParseXmlRfile(KO_CIK, KO_test_accessionNumber, ko_rfilename)
-
-	//SEC-files/filingSummaryAndRfiles/0000021344/0000021344-21-000014
-
 	// combinecsvfiles.GetCSVfilepathsInOrder(SMRT_CIK, client)
 	geteverythinggivencik.GetEverythingGivenCIK(META_CIK, client)
-	// combinecsvfiles.Tester(SMRT_CIK, client)
-	// utilityfunctions.ConvertStringDatesIntoIntNumberDates("Sep. 30, 2011")
+
 }

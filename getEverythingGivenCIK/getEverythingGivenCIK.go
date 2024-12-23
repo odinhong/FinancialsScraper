@@ -15,4 +15,5 @@ func GetEverythingGivenCIK(CIK string, client *mongo.Client) {
 	categorizefinancialstatements.ParseManyFilingSummaryXmlFilesAndSaveToMongoGivenCIK(CIK, client)
 	parserfiles.DownloadRfiles(CIK, client)
 	parserfiles.ParseManyRfilesAndSaveAsCSVs(CIK, client)
+
 }
