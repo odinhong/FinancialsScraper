@@ -2,6 +2,7 @@ package parserfiles
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -10,8 +11,10 @@ import (
 	"strconv"
 	"strings"
 
+	utilityfunctions "github.com/Programmerdin/FinancialDataSite_Go/utilityFunctions"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/antchfx/xmlquery"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -44,11 +47,11 @@ func ParseManyRfilesAndSaveAsCSVs(CIK string, client *mongo.Client) {
 	}
 
 	for i := 0; i < len(accessionNumbers_to_parse); i++ {
-		ParseRfileAndSaveAsCSV(CIK, accessionNumbers_to_parse[i], Rfilenames_to_parse[i])
+		ParseRfileAndSaveAsCSV(CIK, accessionNumbers_to_parse[i], Rfilenames_to_parse[i], client)
 	}
 }
 
-func ParseRfileAndSaveAsCSV(CIK, accessionNumber, RfileName string) error {
+func ParseRfileAndSaveAsCSV(CIK, accessionNumber, RfileName string, client *mongo.Client) error {
 	//check if RfileName is .htm or .html or .xml
 	fileExt := filepath.Ext(RfileName)
 
@@ -72,7 +75,7 @@ func ParseRfileAndSaveAsCSV(CIK, accessionNumber, RfileName string) error {
 		}
 	}
 
-	cleanParsedRfile := CleanParsedRfile(&parsedRfile, accessionNumber)
+	cleanParsedRfile := CleanParsedRfile(&parsedRfile, accessionNumber, client)
 
 	err = saveParsedRfileAsCSV(&cleanParsedRfile, CIK, accessionNumber, RfileName)
 	if err != nil {
@@ -338,7 +341,7 @@ func ParseXmlRfile(CIK, accessionNumber, RfileName string) (StatementData, error
 	return statementData, nil
 }
 
-func CleanParsedRfile(statementData *StatementData, accessionNumber string) StatementData {
+func CleanParsedRfile(statementData *StatementData, accessionNumber string, client *mongo.Client) StatementData {
 	var statementDataArray [][]string
 
 	// Convert headers and data to one single slice
@@ -398,15 +401,51 @@ func CleanParsedRfile(statementData *StatementData, accessionNumber string) Stat
 	//add an empty row at the end of statementDataClean.Headers to separate the headers from the data
 	statementDataClean.Headers = append(statementDataClean.Headers, []string{})
 
-	// Create and add accession number row at the very top of headers
-	accessionRow := make([]string, len(statementDataClean.Headers[0]))
-	accessionRow[0] = "accessionNumber"
-	for i := 1; i < len(accessionRow); i++ {
-		accessionRow[i] = accessionNumber
+	// Create and add accessionNumber, form, and report date rows at the very top of headers
+	reportDate, form, err := FindReportDateAndFormGivenAccessionNumber(accessionNumber, client)
+	if err != nil {
+		log.Printf("Error finding report date and form: %v", err)
+		reportDate = ""
+		form = ""
 	}
-	statementDataClean.Headers = append([][]string{accessionRow}, statementDataClean.Headers...)
+
+	formRow := make([]string, len(statementDataClean.Headers[0]))
+	formRow[0] = "form"
+	for i := 1; i < len(formRow); i++ {
+		formRow[i] = form
+	}
+
+	reportDateRow := make([]string, len(statementDataClean.Headers[0]))
+	reportDateRow[0] = "reportDate"
+	for i := 1; i < len(reportDateRow); i++ {
+		reportDateRow[i] = reportDate
+	}
+
+	accessionNumberRow := make([]string, len(statementDataClean.Headers[0]))
+	accessionNumberRow[0] = "accessionNumber"
+	for i := 1; i < len(accessionNumberRow); i++ {
+		accessionNumberRow[i] = accessionNumber
+	}
+
+	statementDataClean.Headers = append([][]string{accessionNumberRow, formRow, reportDateRow}, statementDataClean.Headers...)
 
 	return statementDataClean
+}
+
+// FindReportDateAndFormGivenAccessionNumber finds the report date and form type for a given accession number from MongoDB
+func FindReportDateAndFormGivenAccessionNumber(accessionNumber string, client *mongo.Client) (ReportDate string, Form string, err error) {
+	collection := utilityfunctions.GetMongoDBCollection(client)
+
+	filter := bson.M{"accessionnumber": accessionNumber}
+	var result bson.M
+	err = collection.FindOne(context.Background(), filter).Decode(&result)
+	if err != nil {
+		return "", "", err
+	}
+	reportDate, _ := result["reportdate"].(string)
+	form, _ := result["form"].(string)
+
+	return reportDate, form, nil
 }
 
 // saveParsedRfileAsCSV saves the parsed R file as a CSV
