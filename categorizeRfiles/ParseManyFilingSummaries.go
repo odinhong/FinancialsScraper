@@ -32,7 +32,7 @@ func ParseManyFilingSummaryXmlFilesAndSaveToMongoGivenCIK(CIK string, client *mo
 
 func SaveRfileObjectsToMongoDB(CIK, accessionNumber string, rfileObjects []RfileFinancialStatementObject, client *mongo.Client) {
 	databaseName := os.Getenv("DATABASE_NAME")
-	collectionName := os.Getenv("COLLECTION_NAME")
+	collectionName := os.Getenv("10K10QMetaDataCollection")
 	db := client.Database(databaseName)
 	collection := db.Collection(collectionName)
 	ctx := context.Background()
@@ -63,7 +63,7 @@ func SaveRfileObjectsToMongoDB(CIK, accessionNumber string, rfileObjects []Rfile
 
 func RetrieveAccessionNumbersThatHaveFilingSummaries(CIK string, client *mongo.Client) ([]string, error) {
 	databaseName := os.Getenv("DATABASE_NAME")
-	collectionName := os.Getenv("COLLECTION_NAME")
+	collectionName := os.Getenv("10K10QMetaDataCollection")
 	collection := client.Database(databaseName).Collection(collectionName)
 
 	filter := bson.M{"hasFilingSummary": true, "cik": CIK}

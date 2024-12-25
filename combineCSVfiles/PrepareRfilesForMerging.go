@@ -75,7 +75,7 @@ func GenerateFilePathsOfCSVfilesOfFinancialStatementsGivenMongoDocs(MongoDocs []
 
 func RetrieveFinancialStatementMetaDataDocsOldestToNewestReportDate(CIK string, client *mongo.Client) ([]bson.M, error) {
 	databaseName := os.Getenv("DATABASE_NAME")
-	collectionName := os.Getenv("COLLECTION_NAME")
+	collectionName := os.Getenv("10K10QMetaDataCollection")
 	collection := client.Database(databaseName).Collection(collectionName)
 
 	// Finding multiple documents with the specified CIK and Sorting by reportdate in ascending order(old to new) and filtering by CIK

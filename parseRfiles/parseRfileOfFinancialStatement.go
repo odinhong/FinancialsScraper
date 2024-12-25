@@ -398,8 +398,10 @@ func CleanParsedRfile(statementData *StatementData, accessionNumber string, clie
 	copy(statementDataClean.Headers, statementDataArray[:len(statementData.Headers)])
 	copy(statementDataClean.Data, statementDataArray[len(statementData.Headers):])
 
-	//add an empty row at the end of statementDataClean.Headers to separate the headers from the data
-	statementDataClean.Headers = append(statementDataClean.Headers, []string{})
+	//add a separator row at the end of statementDataClean.Headers to separate the headers from the data
+	separatorRow := make([]string, len(statementDataArray[0]))
+	separatorRow[0] = "separator"
+	statementDataClean.Headers = append(statementDataClean.Headers, separatorRow)
 
 	// Create and add accessionNumber, form, and report date rows at the very top of headers
 	reportDate, form, err := FindReportDateAndFormGivenAccessionNumber(accessionNumber, client)
