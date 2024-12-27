@@ -12,8 +12,7 @@ import (
 
 	// utilityfunctions "github.com/Programmerdin/FinancialDataSite_Go/utilityFunctions"
 
-	combinecsvfiles "github.com/Programmerdin/FinancialDataSite_Go/combineCSVfiles"
-
+	geteverythinggivencik "github.com/Programmerdin/FinancialDataSite_Go/getEverythingGivenCIK"
 	"github.com/joho/godotenv"
 )
 
@@ -48,7 +47,7 @@ func main() {
 	}
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
 
-	// var KO_CIK string = "0000021344"
+	var KO_CIK string = "0000021344"
 	// var META_CIK string = "0001326801"
 	// var AAPL_CIK string = "0000320193"
 	// var SMRT_CIK string = "0001837014"
@@ -57,10 +56,10 @@ func main() {
 	// var KO_accessionNumber1 string = "0001104659-21-068286"
 
 	// var Meta_BS_filepath string = "SEC-files\\filingSummaryAndRfiles\\0001326801\\0001326801-13-000003\\R2.csv"
-	var Meta_IS_filepath string = "SEC-files\\filingSummaryAndRfiles\\0001326801\\0001326801-13-000003\\R4.csv"
+	// var Meta_IS_filepath string = "SEC-files\\filingSummaryAndRfiles\\0001326801\\0001326801-13-000003\\R4.csv"
 
 	// combinecsvfiles.GetCSVfilepathsInOrder(SMRT_CIK, client)
-	// geteverythinggivencik.GetEverythingGivenCIK(META_CIK, client)
-	combinecsvfiles.CommonFieldFinderForFinancialStatementRfile(Meta_IS_filepath)
+	geteverythinggivencik.GetEverythingGivenCIK(KO_CIK, client)
+	// combinecsvfiles.CommonFieldFinderForFinancialStatementRfile(Meta_IS_filepath)
 
 }
