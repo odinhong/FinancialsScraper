@@ -66,8 +66,8 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 
 	possibleWords_TotalAssets := []string{"Total Assets"}
 	possibleWords_TotalLiabilities := []string{"Total Liabilities"}
-	possibleWords_commonStock := []string{"Common Stock"}
-	possibleWords_TotalEquity := []string{"Total Stockholders"}
+	possibleWords_commonStock := []string{"Common Stock", "Common Share"}
+	possibleWords_TotalEquity := []string{"Total Stockholders", "Total Shareholders"}
 	possibleWords_OtherEquity := []string{"Preferred Stock", "Preferred Equity", "Convertible Debt"}
 
 	possibleWords_CurrentAssets := []string{"Total Current Assets"}
@@ -89,11 +89,15 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 		{&startRowIndex_OtherEquity, possibleWords_OtherEquity, false},
 	}
 
-	for i := separatorRowIndex + 1; i < len(RfileData2Darray) && DoesDataCellExistInThisRow(RfileData2Darray[i]); i++ {
-		for j := range BalanceSheetSections {
-			if !BalanceSheetSections[j].found && containsAny(RfileData2Darray[i][0], BalanceSheetSections[j].searchWords) {
-				*BalanceSheetSections[j].rowIndex = i
-				BalanceSheetSections[j].found = true
+	for i := separatorRowIndex + 1; i < len(RfileData2Darray); i++ {
+		if DoesDataCellExistInThisRow(RfileData2Darray[i]) {
+			for j := range BalanceSheetSections {
+				if !BalanceSheetSections[j].found {
+					if containsAny(RfileData2Darray[i][0], BalanceSheetSections[j].searchWords) {
+						*BalanceSheetSections[j].rowIndex = i
+						BalanceSheetSections[j].found = true
+					}
+				}
 			}
 		}
 	}
@@ -102,6 +106,8 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 	startRowIndex_Liabilities = endRowIndex_Assets + 1
 	startRowIndex_CurrentAssets = separatorRowIndex + 1
 	startRowIndex_CurrentLiabilities = endRowIndex_Assets + 1
+	startRowIndex_NonCurrentAssets = endRowIndex_CurrentAssets + 1
+	startRowIndex_NonCurrentLiabilities = endRowIndex_CurrentLiabilities + 1
 
 	endRowIndex_NonCurrentAssets = endRowIndex_Assets - 1
 	endRowIndex_NonCurrentLiabilities = endRowIndex_Liabilities - 1
@@ -114,7 +120,9 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 	//check if startRowIndex_OtherEquity is after startRowIndex_Equity && before endRowIndex_Equity
 	//if true, return error and ChatGPT api will be needed to process this R file
 	if startRowIndex_OtherEquity > startRowIndex_Equity && startRowIndex_OtherEquity < endRowIndex_Equity {
-		return BalanceSheetIndices{}, errors.New("startRowIndex_OtherEquity is after startRowIndex_Equity and before endRowIndex_Equity")
+		err := errors.New("startRowIndex_OtherEquity is after startRowIndex_Equity and before endRowIndex_Equity")
+		fmt.Println(err)
+		return BalanceSheetIndices{}, err
 	}
 
 	//check if there are data cells that are not accounted for by the sections described
@@ -137,8 +145,27 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 			continue
 		}
 		// If we get here, we found a row with data that's not in any section
-		return BalanceSheetIndices{}, errors.New("found unaccounted data cells outside of balance sheet sections")
+		err := errors.New("found unaccounted data cells outside of balance sheet sections")
+		fmt.Println(err)
+		return BalanceSheetIndices{}, err
 	}
+
+	fmt.Println("startRowIndex_Assets", startRowIndex_Assets)
+	fmt.Println("endRowIndex_Assets", endRowIndex_Assets)
+	fmt.Println("startRowIndex_Liabilities", startRowIndex_Liabilities)
+	fmt.Println("endRowIndex_Liabilities", endRowIndex_Liabilities)
+	fmt.Println("startRowIndex_Equity", startRowIndex_Equity)
+	fmt.Println("endRowIndex_Equity", endRowIndex_Equity)
+	fmt.Println("startRowIndex_OtherEquity", startRowIndex_OtherEquity)
+	fmt.Println("endRowIndex_OtherEquity", endRowIndex_OtherEquity)
+	fmt.Println("startRowIndex_CurrentAssets", startRowIndex_CurrentAssets)
+	fmt.Println("endRowIndex_CurrentAssets", endRowIndex_CurrentAssets)
+	fmt.Println("startRowIndex_CurrentLiabilities", startRowIndex_CurrentLiabilities)
+	fmt.Println("endRowIndex_CurrentLiabilities", endRowIndex_CurrentLiabilities)
+	fmt.Println("startRowIndex_NonCurrentAssets", startRowIndex_NonCurrentAssets)
+	fmt.Println("endRowIndex_NonCurrentAssets", endRowIndex_NonCurrentAssets)
+	fmt.Println("startRowIndex_NonCurrentLiabilities", startRowIndex_NonCurrentLiabilities)
+	fmt.Println("endRowIndex_NonCurrentLiabilities", endRowIndex_NonCurrentLiabilities)
 
 	//check for inconsistency in row indexes of all balance sheet sections
 	//if an inconsistency is found, return an error and ChatGPT api will be needed to process this R file
@@ -146,13 +173,17 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 		startRowIndex_Liabilities > endRowIndex_Liabilities ||
 		startRowIndex_Equity > endRowIndex_Equity ||
 		startRowIndex_OtherEquity > endRowIndex_OtherEquity {
-		return BalanceSheetIndices{}, errors.New("inconsistency in row indexes of balance sheet sections")
+		err := errors.New("inconsistency in row indexes of balance sheet sections 1")
+		fmt.Println(err)
+		return BalanceSheetIndices{}, err
 	}
 	if startRowIndex_CurrentAssets > endRowIndex_CurrentAssets ||
 		startRowIndex_CurrentLiabilities > endRowIndex_CurrentLiabilities ||
 		startRowIndex_NonCurrentAssets > endRowIndex_NonCurrentAssets ||
 		startRowIndex_NonCurrentLiabilities > endRowIndex_NonCurrentLiabilities {
-		return BalanceSheetIndices{}, errors.New("inconsistency in row indexes of balance sheet sections")
+		err := errors.New("inconsistency in row indexes of balance sheet sections 2")
+		fmt.Println(err)
+		return BalanceSheetIndices{}, err
 	}
 
 	//current is always above non current, asset is always above liability, liability is always above equity, Other equity is always below liability
@@ -161,31 +192,45 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 
 	// Current above non-current
 	if endRowIndex_CurrentAssets > startRowIndex_NonCurrentAssets {
-		return BalanceSheetIndices{}, errors.New("current assets section overlaps with non-current assets")
+		err := errors.New("current assets section overlaps with non-current assets")
+		fmt.Println(err)
+		return BalanceSheetIndices{}, err
 	}
 	if endRowIndex_CurrentLiabilities > startRowIndex_NonCurrentLiabilities {
-		return BalanceSheetIndices{}, errors.New("current liabilities section overlaps with non-current liabilities")
+		err := errors.New("current liabilities section overlaps with non-current liabilities")
+		fmt.Println(err)
+		return BalanceSheetIndices{}, err
 	}
 
 	// Assets above liabilities above equity
 	if endRowIndex_Assets > startRowIndex_Liabilities {
-		return BalanceSheetIndices{}, errors.New("assets section overlaps with liabilities")
+		err := errors.New("assets section overlaps with liabilities")
+		fmt.Println(err)
+		return BalanceSheetIndices{}, err
 	}
 	if endRowIndex_Liabilities > startRowIndex_Equity {
-		return BalanceSheetIndices{}, errors.New("liabilities section overlaps with equity")
+		err := errors.New("liabilities section overlaps with equity")
+		fmt.Println(err)
+		return BalanceSheetIndices{}, err
 	}
 
 	// Other equity below liability
 	if startRowIndex_OtherEquity != 0 && startRowIndex_OtherEquity < endRowIndex_Liabilities {
-		return BalanceSheetIndices{}, errors.New("other equity section appears before end of liabilities")
+		err := errors.New("other equity section appears before end of liabilities")
+		fmt.Println(err)
+		return BalanceSheetIndices{}, err
 	}
 
 	// Check for section overlaps
-	if startRowIndex_OtherEquity != 0 &&
-		((startRowIndex_OtherEquity < endRowIndex_Assets) ||
-			(startRowIndex_OtherEquity < endRowIndex_Liabilities) ||
-			(startRowIndex_OtherEquity < endRowIndex_Equity)) {
-		return BalanceSheetIndices{}, errors.New("other equity section overlaps with other sections")
+	if startRowIndex_OtherEquity != 0 {
+		// Check if Other Equity's range (start to end) overlaps with any other section's range
+		if (startRowIndex_OtherEquity <= endRowIndex_Assets && endRowIndex_OtherEquity >= startRowIndex_Assets) ||
+			(startRowIndex_OtherEquity <= endRowIndex_Liabilities && endRowIndex_OtherEquity >= startRowIndex_Liabilities) ||
+			(startRowIndex_OtherEquity <= endRowIndex_Equity && endRowIndex_OtherEquity >= startRowIndex_Equity) {
+			err := errors.New("other equity section overlaps with other sections")
+			fmt.Println(err)
+			return BalanceSheetIndices{}, err
+		}
 	}
 
 	//once the checks are done, return the indices struct
@@ -213,6 +258,7 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 		NonCurrentLiabilitiesEnd:   endRowIndex_NonCurrentLiabilities,
 	}
 
+	fmt.Println(indices)
 	return indices, nil
 }
 
@@ -221,11 +267,14 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 func CommonInitialProcessorForCsvRfile(RfilePath string) (RfileData2Darray_ [][]string, reportDate_ string, form_ string, accessionNumber_ string, totalLineItemCount_ int, separatorRowIndex_ int, err error) {
 	RfileData2Darray, err := utilityfunctions.ReadCsvFileToArray(RfilePath)
 	if err != nil {
+		fmt.Println(err)
 		return nil, "", "", "", 0, 0, err
 	}
 
 	if len(RfileData2Darray) == 0 {
-		return nil, "", "", "", 0, 0, errors.New("empty CSV file")
+		err := errors.New("empty CSV file")
+		fmt.Println(err)
+		return nil, "", "", "", 0, 0, err
 	}
 
 	var reportDate string
@@ -249,13 +298,19 @@ func CommonInitialProcessorForCsvRfile(RfilePath string) (RfileData2Darray_ [][]
 
 	//return error if reportDate, form, or accessionNumber not found
 	if reportDate == "" {
-		return nil, "", "", "", 0, 0, errors.New("reportDate not found")
+		err := errors.New("reportDate not found")
+		fmt.Println(err)
+		return nil, "", "", "", 0, 0, err
 	}
 	if form == "" {
-		return nil, "", "", "", 0, 0, errors.New("form not found")
+		err := errors.New("form not found")
+		fmt.Println(err)
+		return nil, "", "", "", 0, 0, err
 	}
 	if accessionNumber == "" {
-		return nil, "", "", "", 0, 0, errors.New("accessionNumber not found")
+		err := errors.New("accessionNumber not found")
+		fmt.Println(err)
+		return nil, "", "", "", 0, 0, err
 	}
 
 	//find first separator row
@@ -292,7 +347,11 @@ func CommonInitialProcessorForCsvRfile(RfilePath string) (RfileData2Darray_ [][]
 
 // Helper function to check if any string in the array is contained in the target
 func containsAny(target string, possibilities []string) bool {
+	// Remove spaces and convert to lowercase
+	target = strings.ToLower(strings.ReplaceAll(target, " ", ""))
 	for _, possible := range possibilities {
+		// Remove spaces and convert to lowercase for comparison
+		possible = strings.ToLower(strings.ReplaceAll(possible, " ", ""))
 		if strings.Contains(target, possible) {
 			return true
 		}
@@ -302,8 +361,12 @@ func containsAny(target string, possibilities []string) bool {
 
 // Helper function to check if the row contains a data cell that is not empty
 func DoesDataCellExistInThisRow(row []string) bool {
+	if len(row) == 0 || row[0] == "" {
+		return false
+	}
+	// Check if any column after the first has data
 	for i := 1; i < len(row); i++ {
-		if row[0] != "" && row[i] != "" {
+		if row[i] != "" {
 			return true
 		}
 	}
