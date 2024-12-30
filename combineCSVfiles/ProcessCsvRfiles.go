@@ -71,6 +71,7 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 	possibleWords_OtherEquity := []string{"Preferred Stock", "Preferred Equity", "Convertible Debt"}
 
 	possibleWords_CurrentAssets := []string{"Total Current Assets"}
+	possibleWords_StartCurrentAssets := []string{"Cash and Cash Equivalents"}
 	possibleWords_CurrentLiabilities := []string{"Total Current Liabilities"}
 
 	type BalanceSheetSection struct {
@@ -85,6 +86,7 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 		{&startRowIndex_Equity, possibleWords_commonStock, false},
 		{&endRowIndex_Equity, possibleWords_TotalEquity, false},
 		{&endRowIndex_CurrentAssets, possibleWords_CurrentAssets, false},
+		{&startRowIndex_CurrentAssets, possibleWords_StartCurrentAssets, false},
 		{&endRowIndex_CurrentLiabilities, possibleWords_CurrentLiabilities, false},
 		{&startRowIndex_OtherEquity, possibleWords_OtherEquity, false},
 	}
@@ -104,7 +106,6 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 
 	startRowIndex_Assets = separatorRowIndex + 1 //Assuming balance sheet starts after separator row and starts with Assets
 	startRowIndex_Liabilities = endRowIndex_Assets + 1
-	startRowIndex_CurrentAssets = separatorRowIndex + 1
 	startRowIndex_CurrentLiabilities = endRowIndex_Assets + 1
 	startRowIndex_NonCurrentAssets = endRowIndex_CurrentAssets + 1
 	startRowIndex_NonCurrentLiabilities = endRowIndex_CurrentLiabilities + 1
@@ -168,6 +169,20 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 	fmt.Println("endRowIndex_NonCurrentLiabilities", endRowIndex_NonCurrentLiabilities)
 
 	//check for inconsistency in row indexes of all balance sheet sections
+	//check if any of the rows are above or equal to separatorRowIndex
+	if startRowIndex_Assets <= separatorRowIndex ||
+		startRowIndex_Liabilities <= separatorRowIndex ||
+		startRowIndex_Equity <= separatorRowIndex ||
+		startRowIndex_OtherEquity <= separatorRowIndex ||
+		startRowIndex_CurrentAssets <= separatorRowIndex ||
+		startRowIndex_CurrentLiabilities <= separatorRowIndex ||
+		startRowIndex_NonCurrentAssets <= separatorRowIndex ||
+		startRowIndex_NonCurrentLiabilities <= separatorRowIndex {
+		err := errors.New("a Balance sheet section is above the separatorRowIndex")
+		fmt.Println(err)
+		return BalanceSheetIndices{}, err
+	}
+
 	//if an inconsistency is found, return an error and ChatGPT api will be needed to process this R file
 	if startRowIndex_Assets > endRowIndex_Assets ||
 		startRowIndex_Liabilities > endRowIndex_Liabilities ||
