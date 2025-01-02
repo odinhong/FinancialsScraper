@@ -65,13 +65,13 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 	var endRowIndex_NonCurrentLiabilities int
 
 	possibleWords_TotalAssets := []string{"Total Assets"}
+	possibleWords_StartAssets := []string{"Cash and Cash Equivalents"}
 	possibleWords_TotalLiabilities := []string{"Total Liabilities"}
 	possibleWords_commonStock := []string{"Common Stock", "Common Share"}
 	possibleWords_TotalEquity := []string{"Total Stockholders", "Total Shareholders"}
 	possibleWords_OtherEquity := []string{"Preferred Stock", "Preferred Equity", "Convertible Debt"}
 
 	possibleWords_CurrentAssets := []string{"Total Current Assets"}
-	possibleWords_StartCurrentAssets := []string{"Cash and Cash Equivalents"}
 	possibleWords_CurrentLiabilities := []string{"Total Current Liabilities"}
 
 	type BalanceSheetSection struct {
@@ -81,12 +81,13 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 	}
 
 	BalanceSheetSections := []BalanceSheetSection{
+		{&startRowIndex_CurrentAssets, possibleWords_StartAssets, false},
+		{&startRowIndex_Assets, possibleWords_StartAssets, false},
 		{&endRowIndex_Assets, possibleWords_TotalAssets, false},
 		{&endRowIndex_Liabilities, possibleWords_TotalLiabilities, false},
 		{&startRowIndex_Equity, possibleWords_commonStock, false},
 		{&endRowIndex_Equity, possibleWords_TotalEquity, false},
 		{&endRowIndex_CurrentAssets, possibleWords_CurrentAssets, false},
-		{&startRowIndex_CurrentAssets, possibleWords_StartCurrentAssets, false},
 		{&endRowIndex_CurrentLiabilities, possibleWords_CurrentLiabilities, false},
 		{&startRowIndex_OtherEquity, possibleWords_OtherEquity, false},
 	}
@@ -104,7 +105,6 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 		}
 	}
 
-	startRowIndex_Assets = separatorRowIndex + 1 //Assuming balance sheet starts after separator row and starts with Assets
 	startRowIndex_Liabilities = endRowIndex_Assets + 1
 	startRowIndex_CurrentLiabilities = endRowIndex_Assets + 1
 	startRowIndex_NonCurrentAssets = endRowIndex_CurrentAssets + 1
@@ -150,23 +150,6 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 		fmt.Println(err)
 		return BalanceSheetIndices{}, err
 	}
-
-	fmt.Println("startRowIndex_Assets", startRowIndex_Assets)
-	fmt.Println("endRowIndex_Assets", endRowIndex_Assets)
-	fmt.Println("startRowIndex_Liabilities", startRowIndex_Liabilities)
-	fmt.Println("endRowIndex_Liabilities", endRowIndex_Liabilities)
-	fmt.Println("startRowIndex_Equity", startRowIndex_Equity)
-	fmt.Println("endRowIndex_Equity", endRowIndex_Equity)
-	fmt.Println("startRowIndex_OtherEquity", startRowIndex_OtherEquity)
-	fmt.Println("endRowIndex_OtherEquity", endRowIndex_OtherEquity)
-	fmt.Println("startRowIndex_CurrentAssets", startRowIndex_CurrentAssets)
-	fmt.Println("endRowIndex_CurrentAssets", endRowIndex_CurrentAssets)
-	fmt.Println("startRowIndex_CurrentLiabilities", startRowIndex_CurrentLiabilities)
-	fmt.Println("endRowIndex_CurrentLiabilities", endRowIndex_CurrentLiabilities)
-	fmt.Println("startRowIndex_NonCurrentAssets", startRowIndex_NonCurrentAssets)
-	fmt.Println("endRowIndex_NonCurrentAssets", endRowIndex_NonCurrentAssets)
-	fmt.Println("startRowIndex_NonCurrentLiabilities", startRowIndex_NonCurrentLiabilities)
-	fmt.Println("endRowIndex_NonCurrentLiabilities", endRowIndex_NonCurrentLiabilities)
 
 	//check for inconsistency in row indexes of all balance sheet sections
 	//check if any of the rows are above or equal to separatorRowIndex
@@ -274,6 +257,23 @@ func ProcessBalanceSheetCsvRfile(RfilePath string) (BalanceSheetIndices, error) 
 	}
 
 	fmt.Println(indices)
+
+	fmt.Println("startRowIndex_Assets", startRowIndex_Assets)
+	fmt.Println("endRowIndex_Assets", endRowIndex_Assets)
+	fmt.Println("startRowIndex_CurrentAssets", startRowIndex_CurrentAssets)
+	fmt.Println("endRowIndex_CurrentAssets", endRowIndex_CurrentAssets)
+	fmt.Println("startRowIndex_NonCurrentAssets", startRowIndex_NonCurrentAssets)
+	fmt.Println("endRowIndex_NonCurrentAssets", endRowIndex_NonCurrentAssets)
+	fmt.Println("startRowIndex_Liabilities", startRowIndex_Liabilities)
+	fmt.Println("endRowIndex_Liabilities", endRowIndex_Liabilities)
+	fmt.Println("startRowIndex_CurrentLiabilities", startRowIndex_CurrentLiabilities)
+	fmt.Println("endRowIndex_CurrentLiabilities", endRowIndex_CurrentLiabilities)
+	fmt.Println("startRowIndex_NonCurrentLiabilities", startRowIndex_NonCurrentLiabilities)
+	fmt.Println("endRowIndex_NonCurrentLiabilities", endRowIndex_NonCurrentLiabilities)
+	fmt.Println("startRowIndex_Equity", startRowIndex_Equity)
+	fmt.Println("endRowIndex_Equity", endRowIndex_Equity)
+	fmt.Println("startRowIndex_OtherEquity", startRowIndex_OtherEquity)
+	fmt.Println("endRowIndex_OtherEquity", endRowIndex_OtherEquity)
 	return indices, nil
 }
 

@@ -341,6 +341,24 @@ func ParseXmlRfile(CIK, accessionNumber, RfileName string) (StatementData, error
 	return statementData, nil
 }
 
+func getDenominationMultiplier(text string) string {
+	// Convert to lowercase and remove spaces for comparison
+	normalizedText := strings.ToLower(strings.ReplaceAll(text, " ", ""))
+
+	switch {
+	case strings.Contains(normalizedText, "inthousand"):
+		return "1000"
+	case strings.Contains(normalizedText, "inmillion"):
+		return "1000000"
+	case strings.Contains(normalizedText, "inbillion"):
+		return "1000000000"
+	case strings.Contains(normalizedText, "intrillion"):
+		return "1000000000000"
+	default:
+		return "1"
+	}
+}
+
 func CleanParsedRfile(statementData *StatementData, accessionNumber string, client *mongo.Client) StatementData {
 	var statementDataArray [][]string
 
@@ -398,12 +416,90 @@ func CleanParsedRfile(statementData *StatementData, accessionNumber string, clie
 	copy(statementDataClean.Headers, statementDataArray[:len(statementData.Headers)])
 	copy(statementDataClean.Data, statementDataArray[len(statementData.Headers):])
 
-	//add a separator row at the end of statementDataClean.Headers to separate the headers from the data
+	// Create and process denomination row
+	denominationRow := make([]string, len(statementDataArray[0]))
+	denominationRow[0] = "denomination"
+	var denominationText string
+	for i := len(statementDataClean.Headers) - 1; i >= 0; i-- {
+		if statementDataClean.Headers[i][0] != "" {
+			denominationText = statementDataClean.Headers[i][0]
+			break
+		}
+	}
+	multiplier := getDenominationMultiplier(denominationText)
+	for i := 1; i < len(denominationRow); i++ {
+		denominationRow[i] = multiplier
+	}
+
+	// Create and process report period row
+	reportPeriodRow := make([]string, len(statementDataArray[0]))
+	reportPeriodRow[0] = "reportPeriod"
+	lastHeaderRow := statementDataClean.Headers[len(statementDataClean.Headers)-1]
+	for i := 1; i < len(lastHeaderRow); i++ {
+		if lastHeaderRow[i] != "" {
+			reportPeriodRow[i] = utilityfunctions.ConvertDateStringToYYYYMMDD(lastHeaderRow[i])
+			lastHeaderRow[i] = "" // Clear source
+		}
+	}
+
+	//create and process reportDuration row
+	reportDurationRow := make([]string, len(statementDataArray[0]))
+	reportDurationRow[0] = "reportDurationInMonths"
+
+	// Iterate through header rows to find duration information
+	for _, row := range statementDataClean.Headers {
+		if len(row) < 2 || row[1] == "" {
+			continue
+		}
+
+		// Check if second cell contains "months"
+		if !strings.Contains(strings.ToLower(strings.ReplaceAll(row[1], " ", "")), "months") {
+			continue
+		}
+
+		// Verify all other cells have "months"
+		hasAllMonths := true
+		for i := 2; i < len(row); i++ {
+			if row[i] == "" {
+				continue
+			}
+			if !strings.Contains(strings.ToLower(strings.ReplaceAll(row[i], " ", "")), "months") {
+				hasAllMonths = false
+				break
+			}
+		}
+
+		if !hasAllMonths {
+			continue
+		}
+
+		// Extract numbers from cells
+		for i := 1; i < len(row); i++ {
+			if row[i] == "" {
+				continue
+			}
+			// Find number before "months"
+			parts := strings.Fields(row[i])
+			for _, part := range parts {
+				if num, err := strconv.Atoi(part); err == nil {
+					reportDurationRow[i] = strconv.Itoa(num)
+					break
+				}
+			}
+		}
+	}
+
+	// Create separator row
 	separatorRow := make([]string, len(statementDataArray[0]))
 	separatorRow[0] = "separator"
+
+	// Add all new rows in sequence
+	statementDataClean.Headers = append(statementDataClean.Headers, denominationRow)
+	statementDataClean.Headers = append(statementDataClean.Headers, reportPeriodRow)
+	statementDataClean.Headers = append(statementDataClean.Headers, reportDurationRow)
 	statementDataClean.Headers = append(statementDataClean.Headers, separatorRow)
 
-	// Create and add accessionNumber, form, and report date rows at the very top of headers
+	// Get metadata for top rows
 	reportDate, form, err := FindReportDateAndFormGivenAccessionNumber(accessionNumber, client)
 	if err != nil {
 		log.Printf("Error finding report date and form: %v", err)
@@ -411,25 +507,46 @@ func CleanParsedRfile(statementData *StatementData, accessionNumber string, clie
 		form = ""
 	}
 
-	formRow := make([]string, len(statementDataClean.Headers[0]))
-	formRow[0] = "form"
-	for i := 1; i < len(formRow); i++ {
-		formRow[i] = form
-	}
-
-	reportDateRow := make([]string, len(statementDataClean.Headers[0]))
-	reportDateRow[0] = "reportDate"
-	for i := 1; i < len(reportDateRow); i++ {
-		reportDateRow[i] = reportDate
-	}
-
+	// Create and fill accessionNumber row
 	accessionNumberRow := make([]string, len(statementDataClean.Headers[0]))
 	accessionNumberRow[0] = "accessionNumber"
 	for i := 1; i < len(accessionNumberRow); i++ {
 		accessionNumberRow[i] = accessionNumber
 	}
 
+	// Create and fill form row
+	formRow := make([]string, len(statementDataClean.Headers[0]))
+	formRow[0] = "form"
+	for i := 1; i < len(formRow); i++ {
+		formRow[i] = form
+	}
+
+	// Create and fill report date row
+	reportDateRow := make([]string, len(statementDataClean.Headers[0]))
+	reportDateRow[0] = "reportDate"
+	for i := 1; i < len(reportDateRow); i++ {
+		reportDateRow[i] = reportDate
+	}
+
+	// Add metadata rows at the top
 	statementDataClean.Headers = append([][]string{accessionNumberRow, formRow, reportDateRow}, statementDataClean.Headers...)
+
+	// Remove empty rows from headers
+	var cleanedHeaders [][]string
+	for _, row := range statementDataClean.Headers {
+		// Check if row has any non-empty cells
+		hasContent := false
+		for _, cell := range row {
+			if cell != "" {
+				hasContent = true
+				break
+			}
+		}
+		if hasContent {
+			cleanedHeaders = append(cleanedHeaders, row)
+		}
+	}
+	statementDataClean.Headers = cleanedHeaders
 
 	return statementDataClean
 }
@@ -446,6 +563,10 @@ func FindReportDateAndFormGivenAccessionNumber(accessionNumber string, client *m
 	}
 	reportDate, _ := result["reportdate"].(string)
 	form, _ := result["form"].(string)
+
+	if reportDate != "" {
+		reportDate = utilityfunctions.ConvertDateStringToYYYYMMDD(reportDate)
+	}
 
 	return reportDate, form, nil
 }
