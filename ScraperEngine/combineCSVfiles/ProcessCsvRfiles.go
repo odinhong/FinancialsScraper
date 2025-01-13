@@ -3,7 +3,6 @@ package combinecsvfiles
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	utilityfunctions "github.com/Programmerdin/FinancialDataSite_Go/utilityFunctions"
 )
@@ -358,32 +357,4 @@ func CommonInitialProcessorForCsvRfile(RfilePath string) (RfileData2Darray_ [][]
 	fmt.Println("separatorRowIndex: ", separatorRowIndex)
 
 	return RfileData2Darray, reportDate, form, accessionNumber, totalLineItemCount, separatorRowIndex, nil
-}
-
-// Helper function to check if any string in the array is contained in the target
-func containsAny(target string, possibilities []string) bool {
-	// Remove spaces and convert to lowercase
-	target = strings.ToLower(strings.ReplaceAll(target, " ", ""))
-	for _, possible := range possibilities {
-		// Remove spaces and convert to lowercase for comparison
-		possible = strings.ToLower(strings.ReplaceAll(possible, " ", ""))
-		if strings.Contains(target, possible) {
-			return true
-		}
-	}
-	return false
-}
-
-// Helper function to check if the row contains a data cell that is not empty
-func DoesDataCellExistInThisRow(row []string) bool {
-	if len(row) == 0 || row[0] == "" {
-		return false
-	}
-	// Check if any column after the first has data
-	for i := 1; i < len(row); i++ {
-		if row[i] != "" {
-			return true
-		}
-	}
-	return false
 }
