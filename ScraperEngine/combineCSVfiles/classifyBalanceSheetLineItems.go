@@ -95,16 +95,16 @@ func classifyBalanceSheetLineItems(financialStatementArray [][]string) (BalanceS
 		}
 	}
 
-	fmt.Println("currentAssetsRowIndex", currentAssetsRowIndex)
-	fmt.Println("totalCurrentAssetsRowIndex", totalCurrentAssetsRowIndex)
-	fmt.Println("totalAssetsRowIndex", totalAssetsRowIndex)
-	fmt.Println("currentLiabilitiesRowIndex", currentLiabilitiesRowIndex)
-	fmt.Println("totalCurrentLiabilitiesRowIndex", totalCurrentLiabilitiesRowIndex)
-	fmt.Println("totalLiabilitiesRowIndex", totalLiabilitiesRowIndex)
-	fmt.Println("stockholdersEquityRowIndex", stockholdersEquityRowIndex)
-	fmt.Println("totalStockholdersEquityRowIndex", totalStockholdersEquityRowIndex)
-	fmt.Println("totalLiabilitiesEquityAndOtherEquityRowIndex", totalLiabilitiesEquityAndOtherEquityRowIndex)
-	fmt.Println("otherEquitiesRowIndex", otherEquitiesRowIndex)
+	// fmt.Println("currentAssetsRowIndex", currentAssetsRowIndex)
+	// fmt.Println("totalCurrentAssetsRowIndex", totalCurrentAssetsRowIndex)
+	// fmt.Println("totalAssetsRowIndex", totalAssetsRowIndex)
+	// fmt.Println("currentLiabilitiesRowIndex", currentLiabilitiesRowIndex)
+	// fmt.Println("totalCurrentLiabilitiesRowIndex", totalCurrentLiabilitiesRowIndex)
+	// fmt.Println("totalLiabilitiesRowIndex", totalLiabilitiesRowIndex)
+	// fmt.Println("stockholdersEquityRowIndex", stockholdersEquityRowIndex)
+	// fmt.Println("totalStockholdersEquityRowIndex", totalStockholdersEquityRowIndex)
+	// fmt.Println("totalLiabilitiesEquityAndOtherEquityRowIndex", totalLiabilitiesEquityAndOtherEquityRowIndex)
+	// fmt.Println("otherEquitiesRowIndex", otherEquitiesRowIndex)
 
 	//return error if any of the variables are still -1
 	if currentAssetsRowIndex == -1 ||
@@ -117,7 +117,16 @@ func classifyBalanceSheetLineItems(financialStatementArray [][]string) (BalanceS
 		totalStockholdersEquityRowIndex == -1 ||
 		totalLiabilitiesEquityAndOtherEquityRowIndex == -1 {
 
-		return BalanceSheetLineItemClassifications{}, fmt.Errorf("could not find all the line items in the balance sheet")
+		return BalanceSheetLineItemClassifications{}, fmt.Errorf("could not find all the line items in the balance sheet" + "\n" +
+			"currentAssetsRowIndex: " + fmt.Sprintf("%d", currentAssetsRowIndex) + "\n" +
+			"totalCurrentAssetsRowIndex: " + fmt.Sprintf("%d", totalCurrentAssetsRowIndex) + "\n" +
+			"totalAssetsRowIndex: " + fmt.Sprintf("%d", totalAssetsRowIndex) + "\n" +
+			"currentLiabilitiesRowIndex: " + fmt.Sprintf("%d", currentLiabilitiesRowIndex) + "\n" +
+			"totalCurrentLiabilitiesRowIndex: " + fmt.Sprintf("%d", totalCurrentLiabilitiesRowIndex) + "\n" +
+			"totalLiabilitiesRowIndex: " + fmt.Sprintf("%d", totalLiabilitiesRowIndex) + "\n" +
+			"stockholdersEquityRowIndex: " + fmt.Sprintf("%d", stockholdersEquityRowIndex) + "\n" +
+			"totalStockholdersEquityRowIndex: " + fmt.Sprintf("%d", totalStockholdersEquityRowIndex) + "\n" +
+			"totalLiabilitiesEquityAndOtherEquityRowIndex: " + fmt.Sprintf("%d", totalLiabilitiesEquityAndOtherEquityRowIndex))
 	}
 
 	// Check the order using the helper function
@@ -190,6 +199,6 @@ func TesterFunction(CIK string, client *mongo.Client) {
 			fmt.Println("Error classifying balance sheet line items:", err)
 			return
 		}
-		fmt.Println(BalanceSheetLineItemClassifications)
+		fmt.Println("accessionNumber", BalanceSheetArray[0][1], "BalanceSheetLineItemClassifications", BalanceSheetLineItemClassifications)
 	}
 }
