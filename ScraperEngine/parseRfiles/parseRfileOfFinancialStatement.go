@@ -606,8 +606,12 @@ func saveParsedRfileAsCSV(statementData *StatementData, CIK string, accessionNum
 	// Join all lines into a single CSV string
 	csvContent := strings.Join(csvLines, "\n")
 
-	// Write CSV string to a file
-	err := os.WriteFile(outputFilePath, []byte(csvContent), 0644)
+	// Add UTF-8 BOM at the start of the file
+	bom := []byte{0xEF, 0xBB, 0xBF}
+	content := append(bom, []byte(csvContent)...)
+
+	// Write CSV string to a file with UTF-8 BOM
+	err := os.WriteFile(outputFilePath, content, 0644)
 	if err != nil {
 		return fmt.Errorf("error writing CSV file: %w", err)
 	}
@@ -631,6 +635,17 @@ func escapeCsvCell(cell string, isDataCell bool, isFirstColumn bool) string {
 		// Remove unwanted characters
 		cellString = strings.NewReplacer(",", "", "$", "", "(", "", ")", "").Replace(cellString)
 	} else {
+		// Replace special characters with their standard ASCII equivalents
+		cellString = strings.NewReplacer(
+			"\u2018", "'", // Replace left single quote
+			"\u2019", "'", // Replace right single quote
+			"\u201C", "\"", // Replace left double quote
+			"\u201D", "\"", // Replace right double quote
+			"\u2013", "-", // Replace en dash
+			"\u2014", "-", // Replace em dash
+			"\u2026", "...", // Replace ellipsis
+		).Replace(cellString)
+
 		// Escape double quotes for CSV
 		cellString = strings.ReplaceAll(cellString, "\"", "\"\"")
 	}

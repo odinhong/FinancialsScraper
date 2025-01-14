@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	combinecsvfiles "github.com/Programmerdin/FinancialDataSite_Go/combineCSVfiles"
+	geteverythinggivencik "github.com/Programmerdin/FinancialDataSite_Go/getEverythingGivenCIK"
 	"github.com/joho/godotenv"
 )
 
@@ -57,9 +57,9 @@ func main() {
 	// var Meta_IS_filepath string = "SEC-files\\filingSummaryAndRfiles\\0001326801\\0001326801-13-000003\\R4.csv"
 
 	// combinecsvfiles.GetFinancialStatementsCsvRfilePathsGivenCIK(SMRT_CIK, client)
-	// geteverythinggivencik.GetEverythingGivenCIK(META_CIK, client)
+	geteverythinggivencik.GetEverythingGivenCIK(META_CIK, client)
 	// combinecsvfiles.CommonFieldFinderForFinancialStatementRfile(Meta_IS_filepath)
-	combinecsvfiles.TesterFunction(META_CIK, client)
+	// combinecsvfiles.TesterFunction(META_CIK, client)
 
 	// // Test OpenAI Connection
 	// if err := combinecsvfiles.TestOpenAIConnection(); err != nil {
