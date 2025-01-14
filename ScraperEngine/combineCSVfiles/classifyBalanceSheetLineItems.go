@@ -2,6 +2,8 @@ package combinecsvfiles
 
 import (
 	"fmt"
+
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type BalanceSheetLineItemClassifications struct {
@@ -44,7 +46,7 @@ func classifyBalanceSheetLineItems(financialStatementArray [][]string) (BalanceS
 	for i := separatorRowIndex + 1; i < len(financialStatementArray); i++ {
 		row := financialStatementArray[i]
 
-		if containsAny(row[0], []string{"Current Assets", "Current assets"}) && currentAssetsRowIndex == -1 && DoesDataCellExistInThisRow(row) {
+		if containsAny(row[0], []string{"Current Assets", "Current assets"}) && currentAssetsRowIndex == -1 {
 			currentAssetsRowIndex = i
 		}
 		if containsAny(row[0], []string{"Total Current Assets", "Total current assets"}) && totalCurrentAssetsRowIndex == -1 && DoesDataCellExistInThisRow(row) {
@@ -53,7 +55,7 @@ func classifyBalanceSheetLineItems(financialStatementArray [][]string) (BalanceS
 		if containsAny(row[0], []string{"Total Assets", "Total assets"}) && totalAssetsRowIndex == -1 && DoesDataCellExistInThisRow(row) {
 			totalAssetsRowIndex = i
 		}
-		if containsAny(row[0], []string{"Current Liabilities", "Current liabilities"}) && currentLiabilitiesRowIndex == -1 && DoesDataCellExistInThisRow(row) {
+		if containsAny(row[0], []string{"Current Liabilities", "Current liabilities"}) && currentLiabilitiesRowIndex == -1 {
 			currentLiabilitiesRowIndex = i
 		}
 		if containsAny(row[0], []string{"Total Current Liabilities", "Total current liabilities"}) && totalCurrentLiabilitiesRowIndex == -1 && DoesDataCellExistInThisRow(row) {
@@ -62,7 +64,7 @@ func classifyBalanceSheetLineItems(financialStatementArray [][]string) (BalanceS
 		if containsAny(row[0], []string{"Total Liabilities", "Total liabilities"}) && totalLiabilitiesRowIndex == -1 && DoesDataCellExistInThisRow(row) {
 			totalLiabilitiesRowIndex = i
 		}
-		if containsAny(row[0], []string{"Stockholders' Equity", "Shareholders' Equity", "Shareowners' Equity", "Equity"}) && stockholdersEquityRowIndex == -1 && DoesDataCellExistInThisRow(row) {
+		if containsAny(row[0], []string{"Stockholders' Equity", "Shareholders' Equity", "Shareowners' Equity", "Equity"}) && stockholdersEquityRowIndex == -1 {
 			stockholdersEquityRowIndex = i
 		}
 		if containsAny(row[0], []string{"Total Stockholders' Equity", "Total Shareholders' Equity", "Total Shareowners' Equity", "Total Equity"}) && totalStockholdersEquityRowIndex == -1 && DoesDataCellExistInThisRow(row) {
@@ -92,6 +94,17 @@ func classifyBalanceSheetLineItems(financialStatementArray [][]string) (BalanceS
 			otherEquitiesRowIndex = append(otherEquitiesRowIndex, i)
 		}
 	}
+
+	fmt.Println("currentAssetsRowIndex", currentAssetsRowIndex)
+	fmt.Println("totalCurrentAssetsRowIndex", totalCurrentAssetsRowIndex)
+	fmt.Println("totalAssetsRowIndex", totalAssetsRowIndex)
+	fmt.Println("currentLiabilitiesRowIndex", currentLiabilitiesRowIndex)
+	fmt.Println("totalCurrentLiabilitiesRowIndex", totalCurrentLiabilitiesRowIndex)
+	fmt.Println("totalLiabilitiesRowIndex", totalLiabilitiesRowIndex)
+	fmt.Println("stockholdersEquityRowIndex", stockholdersEquityRowIndex)
+	fmt.Println("totalStockholdersEquityRowIndex", totalStockholdersEquityRowIndex)
+	fmt.Println("totalLiabilitiesEquityAndOtherEquityRowIndex", totalLiabilitiesEquityAndOtherEquityRowIndex)
+	fmt.Println("otherEquitiesRowIndex", otherEquitiesRowIndex)
 
 	//return error if any of the variables are still -1
 	if currentAssetsRowIndex == -1 ||
@@ -136,13 +149,13 @@ func classifyBalanceSheetLineItems(financialStatementArray [][]string) (BalanceS
 	//currentLiabilitiesRowIndex to totalLiabilitiesRowIndex
 	//stocholdersEquityRowIndex to totalLiabilitiesEquityAndOtherEquityRowIndex
 	//otherEquitiesRowIndex
-	for i := currentAssetsRowIndex; i <= totalAssetsRowIndex; i++ {
+	for i := currentAssetsRowIndex + 1; i <= totalAssetsRowIndex; i++ {
 		accountedForRowIndex = append(accountedForRowIndex, i)
 	}
-	for i := currentLiabilitiesRowIndex; i <= totalLiabilitiesRowIndex; i++ {
+	for i := currentLiabilitiesRowIndex + 1; i <= totalLiabilitiesRowIndex; i++ {
 		accountedForRowIndex = append(accountedForRowIndex, i)
 	}
-	for i := stockholdersEquityRowIndex; i <= totalLiabilitiesEquityAndOtherEquityRowIndex; i++ {
+	for i := stockholdersEquityRowIndex + 1; i <= totalLiabilitiesEquityAndOtherEquityRowIndex; i++ {
 		accountedForRowIndex = append(accountedForRowIndex, i)
 	}
 	accountedForRowIndex = append(accountedForRowIndex, otherEquitiesRowIndex...)
@@ -163,4 +176,20 @@ func classifyBalanceSheetLineItems(financialStatementArray [][]string) (BalanceS
 		TotalLiabilitiesEquityAndOtherEquity: totalLiabilitiesEquityAndOtherEquityRowIndex,
 		OtherEquities:                        otherEquitiesRowIndex,
 	}, nil
+}
+
+func TesterFunction(CIK string, client *mongo.Client) {
+	BalanceSheetArrays, _, _, _, err := GetCsvRfilesIntoArrayVariables(CIK, client)
+	if err != nil {
+		fmt.Println("Error getting CSV files:", err)
+		return
+	}
+	for _, BalanceSheetArray := range BalanceSheetArrays {
+		BalanceSheetLineItemClassifications, err := classifyBalanceSheetLineItems(BalanceSheetArray)
+		if err != nil {
+			fmt.Println("Error classifying balance sheet line items:", err)
+			return
+		}
+		fmt.Println(BalanceSheetLineItemClassifications)
+	}
 }

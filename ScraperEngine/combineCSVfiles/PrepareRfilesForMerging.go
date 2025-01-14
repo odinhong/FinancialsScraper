@@ -79,7 +79,6 @@ func GetCsvRfilesIntoArrayVariables(CIK string, client *mongo.Client) (BalanceSh
 		}
 		CF_arrays = append(CF_arrays, financialStatement)
 	}
-	fmt.Println("BS_arrays", BS_arrays[0], BS_arrays[1], BS_arrays[2], BS_arrays[3])
 
 	return BS_arrays, IS_arrays, CIS_arrays, CF_arrays, nil
 }

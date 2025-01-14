@@ -19,21 +19,27 @@ func containsAny(target string, possibilities []string) bool {
 	return false
 }
 
-// CheckWordsInOrder checks if three words exist in a string in the given order without overlapping
-func CheckWordsInOrder(text string, words []string) bool {
-	if len(words) != 3 {
+// CheckWordsInOrder checks if phrases exist in a string in the given order without overlapping
+func CheckWordsInOrder(text string, phrases []string) bool {
+	if len(phrases) == 0 {
 		return false
 	}
 
+	// Convert text to lowercase and trim spaces
+	text = strings.ToLower(strings.TrimSpace(text))
 	currentIndex := 0
-	for _, word := range words {
-		// Find the word starting from the current index
-		index := strings.Index(text[currentIndex:], word)
+
+	for _, phrase := range phrases {
+		// Convert phrase to lowercase and trim spaces
+		phrase = strings.ToLower(strings.TrimSpace(phrase))
+
+		// Find the phrase starting from the current index
+		index := strings.Index(text[currentIndex:], phrase)
 		if index == -1 {
 			return false
 		}
-		// Move the current index past the found word
-		currentIndex += index + len(word)
+		// Move the current index past the found phrase
+		currentIndex += index + len(phrase)
 	}
 	return true
 }
@@ -89,11 +95,11 @@ func CompareIntSlices(a, b []int) bool {
 	if len(a) != len(b) {
 		return false
 	}
-	
+
 	// Create maps to count occurrences
 	countA := make(map[int]int)
 	countB := make(map[int]int)
-	
+
 	// Count occurrences in both slices
 	for _, val := range a {
 		countA[val]++
@@ -101,13 +107,13 @@ func CompareIntSlices(a, b []int) bool {
 	for _, val := range b {
 		countB[val]++
 	}
-	
+
 	// Compare the counts
 	for key, count := range countA {
 		if countB[key] != count {
 			return false
 		}
 	}
-	
+
 	return true
 }
