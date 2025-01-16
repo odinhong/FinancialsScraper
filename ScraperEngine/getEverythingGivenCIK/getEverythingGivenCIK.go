@@ -16,4 +16,6 @@ func GetEverythingGivenCIK(CIK string, client *mongo.Client) {
 	parserfiles.DownloadRfiles(CIK, client)
 	parserfiles.ParseManyRfilesAndSaveAsCSVs(CIK, client)
 
+	// BalanceSheetArrays, _, _, _, _ := combinecsvfiles.GetCsvRfilesIntoArrayVariables(CIK, client)
+
 }
