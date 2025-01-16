@@ -19,6 +19,20 @@ func containsAny(target string, possibilities []string) bool {
 	return false
 }
 
+// Helper function to check if none of the strings in the array are contained in the target
+func notContainsAny(target string, possibilities []string) bool {
+	// Remove spaces and convert to lowercase
+	target = strings.ToLower(strings.ReplaceAll(target, " ", ""))
+	for _, possible := range possibilities {
+		// Remove spaces and convert to lowercase for comparison
+		possible = strings.ToLower(strings.ReplaceAll(possible, " ", ""))
+		if strings.Contains(target, possible) {
+			return false
+		}
+	}
+	return true
+}
+
 // CheckWordsInOrder checks if phrases exist in a string in the given order without overlapping
 func CheckWordsInOrder(text string, phrases []string) bool {
 	if len(phrases) == 0 {
@@ -92,10 +106,6 @@ func CheckBalanceSheetOrder(indices map[string]int) error {
 
 // CompareIntSlices checks if two int slices contain the same elements regardless of order
 func CompareIntSlices(a, b []int) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
 	// Create maps to count occurrences
 	countA := make(map[int]int)
 	countB := make(map[int]int)
@@ -108,12 +118,38 @@ func CompareIntSlices(a, b []int) bool {
 		countB[val]++
 	}
 
-	// Compare the counts
-	for key, count := range countA {
-		if countB[key] != count {
-			return false
+	// Track missing numbers
+	var missingInB []int
+	var missingInA []int
+
+	// Find numbers missing in B
+	for val := range countA {
+		if countB[val] < countA[val] {
+			for i := 0; i < countA[val]-countB[val]; i++ {
+				missingInB = append(missingInB, val)
+			}
 		}
 	}
 
-	return true
+	// Find numbers missing in A
+	for val := range countB {
+		if countA[val] < countB[val] {
+			for i := 0; i < countB[val]-countA[val]; i++ {
+				missingInA = append(missingInA, val)
+			}
+		}
+	}
+
+	if len(missingInB) > 0 {
+		fmt.Printf("%v missing in B\n", missingInB)
+	}
+	if len(missingInA) > 0 {
+		fmt.Printf("%v missing in A\n", missingInA)
+	}
+
+	if len(a) != len(b) {
+		return false
+	}
+
+	return len(missingInA) == 0 && len(missingInB) == 0
 }
