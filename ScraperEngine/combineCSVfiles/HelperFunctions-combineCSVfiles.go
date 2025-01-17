@@ -103,3 +103,12 @@ func CheckBalanceSheetOrder(indices map[string]int) error {
 
 	return nil
 }
+
+func CheckIfLineItemNameIsInLineItemNameList(lineItemName string, lineItemNameList []string) bool {
+	for _, item := range lineItemNameList {
+		if lineItemName == item {
+			return true
+		}
+	}
+	return false
+}
