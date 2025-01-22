@@ -2,8 +2,95 @@ package combinecsvfiles
 
 import (
 	"fmt"
+	"sort"
+	"strconv"
 	"strings"
 )
+
+// ColInfo holds information about a column for sorting
+type ColInfo struct {
+	index        int
+	reportPeriod int
+	reportDate   int
+}
+
+// GetIndexOfRearrangedColumnsByReportPeriodAndDate returns indices of columns sorted by reportPeriod (ascending) and then reportDate (ascending)
+func GetIndexOfRearrangedColumnsByReportPeriodAndDate(data [][]string, reportPeriodRowIndex, reportDateRowIndex int) []int {
+	if len(data) == 0 {
+		return nil
+	}
+
+	// Create slice of column info
+	colInfos := make([]ColInfo, len(data[0])-1) // -1 because first column is headers
+	for i := 1; i < len(data[0]); i++ {
+		// Convert strings to integers, default to 0 if conversion fails
+		reportPeriod, _ := strconv.Atoi(data[reportPeriodRowIndex][i])
+		reportDate, _ := strconv.Atoi(data[reportDateRowIndex][i])
+
+		colInfos[i-1] = ColInfo{
+			index:        i,
+			reportPeriod: reportPeriod,
+			reportDate:   reportDate,
+		}
+	}
+
+	// Sort the columns based on reportPeriod and reportDate
+	sort.Slice(colInfos, func(i, j int) bool {
+		// If reportPeriods are different, sort by reportPeriod
+		if colInfos[i].reportPeriod != colInfos[j].reportPeriod {
+			return colInfos[i].reportPeriod < colInfos[j].reportPeriod
+		}
+		// If reportPeriods are same, sort by reportDate
+		return colInfos[i].reportDate < colInfos[j].reportDate
+	})
+
+	// Extract the sorted indices
+	result := make([]int, len(colInfos))
+	for i, info := range colInfos {
+		result[i] = info.index
+	}
+
+	return result
+}
+
+// RearrangeColumns moves a specified column to a new position in a 2D array
+func RearrangeColumns(data [][]string, fromIndex, toIndex int) [][]string {
+	if len(data) == 0 {
+		return data
+	}
+
+	result := make([][]string, len(data))
+
+	for i := range data {
+		// Create a new row with the same length as the original
+		newRow := make([]string, len(data[i]))
+
+		// Copy elements before the insertion point
+		for j := 0; j < toIndex; j++ {
+			if j < fromIndex {
+				newRow[j] = data[i][j]
+			} else {
+				newRow[j] = data[i][j]
+			}
+		}
+
+		// Insert the moved column
+		newRow[toIndex] = data[i][fromIndex]
+
+		// Copy remaining elements
+		for j := toIndex + 1; j < len(data[i]); j++ {
+			if j <= fromIndex {
+				newRow[j] = data[i][j-1]
+			} else {
+				newRow[j] = data[i][j]
+			}
+		}
+
+		result[i] = newRow
+	}
+
+	return result
+}
 
 // Helper function to check if any string in the array is contained in the target
 func containsAny(target string, possibilities []string) bool {
@@ -104,6 +191,7 @@ func CheckBalanceSheetOrder(indices map[string]int) error {
 	return nil
 }
 
+// CheckIfLineItemNameIsInLineItemNameList checks if a line item name is in the list
 func CheckIfLineItemNameIsInLineItemNameList(lineItemName string, lineItemNameList []string) bool {
 	for _, item := range lineItemNameList {
 		if lineItemName == item {

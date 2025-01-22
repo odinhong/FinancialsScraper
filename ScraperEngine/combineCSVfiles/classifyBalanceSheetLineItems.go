@@ -19,10 +19,106 @@ type BalanceSheetLineItemClassifications struct {
 	OtherEquities                        []int
 }
 
-// this function is used to comnbine a section of two balance sheets
+func CombineTwoBalanceSheets(BalanceSheet1Array [][]string, BalanceSheet2Array [][]string) (CombinedBalanceSheet [][]string) {
+
+	//go thru the combinedBalanceSheetLineItems and essentailly create a new balance sheet
+	//for new balance sheet, we basically draw out the left col and the top rows for dates n stuff
+	// and for each cell we do find a value that matches all the left col and top rows for the given cell in two input balancesheet arrays
+
+	separatorRowIndex := -1
+	accessionNumberRowIndex := -1
+	formIndex := -1
+	reportDateIndex := -1
+	reportPeriodIndex := -1
+
+	for rowIndex, row := range BalanceSheet1Array {
+		switch row[0] {
+		case "separator":
+			separatorRowIndex = rowIndex
+		case "accessionNumber":
+			accessionNumberRowIndex = rowIndex
+		case "form":
+			formIndex = rowIndex
+		case "reportDate":
+			reportDateIndex = rowIndex
+		case "reportPeriod":
+			reportPeriodIndex = rowIndex
+		default:
+			// handle any other cases
+		}
+	}
+
+	var combinedBalanceSheetArray [][]string
+	//add in metadata of first balance sheet
+	for i := 0; i < separatorRowIndex; i++ {
+		combinedBalanceSheetArray = append(combinedBalanceSheetArray, BalanceSheet1Array[i])
+	}
+	//add in metadata of second balance sheet
+	for i := 0; i < separatorRowIndex; i++ {
+		for j := 1; j < len(BalanceSheet2Array[0]); j++ {
+			combinedBalanceSheetArray[i] = append(combinedBalanceSheetArray[i], BalanceSheet2Array[i][j])
+		}
+	}
+	//get the index of the cols in order it should be in
+	rearrangedColumnIndices := GetIndexOfRearrangedColumnsByReportPeriodAndDate(combinedBalanceSheetArray, reportPeriodIndex, reportDateIndex)
+	//rearrange the columns in order
+	for targetIndex, sourceIndex := range rearrangedColumnIndices {
+		if targetIndex+1 != sourceIndex {
+			combinedBalanceSheetArray = RearrangeColumns(combinedBalanceSheetArray, sourceIndex, targetIndex+1)
+		}
+	}
+
+	//add in line item names
+	BalanceSheet1Classifications, err := classifyBalanceSheetLineItems(BalanceSheet1Array)
+	if err != nil {
+		fmt.Println(err)
+	}
+	BalanceSheet2Classifications, err := classifyBalanceSheetLineItems(BalanceSheet2Array)
+	if err != nil {
+		fmt.Println(err)
+	}
+	combinedBalanceSheetLineItems, err := CombineLineItemNamesOfTwoBalanceSheetsIntoOne(BalanceSheet1Array, BalanceSheet2Array, BalanceSheet1Classifications, BalanceSheet2Classifications)
+	if err != nil {
+		fmt.Println(err)
+	}
+	CurrentAssetsLineItemNames := combinedBalanceSheetLineItems["CurrentAssetsLineItemNames"]
+	NonCurrentAssetsLineItemNames := combinedBalanceSheetLineItems["NonCurrentAssetsLineItemNames"]
+	CurrentLiabilitiesLineItemNames := combinedBalanceSheetLineItems["CurrentLiabilitiesLineItemNames"]
+	NonCurrentLiabilitiesLineItemNames := combinedBalanceSheetLineItems["NonCurrentLiabilitiesLineItemNames"]
+	StockholdersEquityLineItemNames := combinedBalanceSheetLineItems["StockholdersEquityLineItemNames"]
+	OtherEquitiesLineItemNames := combinedBalanceSheetLineItems["OtherEquitiesLineItemNames"]
+
+	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Current Assets"})
+	HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, CurrentAssetsLineItemNames)
+	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Current Assets"})
+	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Non Current Assets"})
+	HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, NonCurrentAssetsLineItemNames)
+	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Assets"})
+	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Current Liabilities"})
+	HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, CurrentLiabilitiesLineItemNames)
+	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Current Liabilities"})
+	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Non Current Liabilities"})
+	HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, NonCurrentLiabilitiesLineItemNames)
+	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Liabilities"})
+	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Stockholders Equity"})
+	HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, StockholdersEquityLineItemNames)
+	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Stockholders' Equity"})
+	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Liabilities and Stockholders' Equity"})
+	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Other Equities"})
+	HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, OtherEquitiesLineItemNames)
+}
+
+func HelperFunction_AppendLineItemNamesToBalanceSheetArray(BalanceSheetArray [][]string, lineItemNames []string) {
+	//add in line item names
+	for i := 0; i < len(lineItemNames); i++ {
+		BalanceSheetArray = append(BalanceSheetArray, []string{lineItemNames[i]})
+	}
+}
+
+// this function is used to comnbine a section of two balance sheets line item names
 // eg combine current assets
 // the new line items will be added to the last row of the first balance sheet
-func HelperFunction_CombineBalanceSheetSectionLineItemNames(BalanceSheet1Array [][]string, BalanceSheet2Array [][]string, startIndex1 int, endIndex1 int, startIndex2 int, endIndex2 int) []string {
+func HelperFunction_CombineBalanceSheetSectionLineItemNames(BalanceSheet1Array [][]string, BalanceSheet2Array [][]string, startIndex1 int, endIndex1 int, startIndex2 int, endIndex2 int) ([]string, error) {
 	var combinedLineItemsNames []string
 
 	// Process BalanceSheet1
@@ -31,6 +127,10 @@ func HelperFunction_CombineBalanceSheetSectionLineItemNames(BalanceSheet1Array [
 		lineItemName := row[0]
 		if DoesDataCellExistInThisRow(row) {
 			combinedLineItemsNames = append(combinedLineItemsNames, lineItemName)
+		} else {
+			err := fmt.Errorf("row %d is empty", i)
+			fmt.Println(err)
+			return nil, err
 		}
 	}
 
@@ -40,44 +140,62 @@ func HelperFunction_CombineBalanceSheetSectionLineItemNames(BalanceSheet1Array [
 		lineItemName := row[0]
 		if DoesDataCellExistInThisRow(row) && !CheckIfLineItemNameIsInLineItemNameList(lineItemName, combinedLineItemsNames) {
 			combinedLineItemsNames = append(combinedLineItemsNames, lineItemName)
+		} else {
+			err := fmt.Errorf("row %d is empty", i)
+			fmt.Println(err)
+			return nil, err
 		}
 	}
 
-	return combinedLineItemsNames
+	return combinedLineItemsNames, nil
 }
 
-func combineLineItemNamesOfTwoBalanceSheetsIntoOne(BalanceSheet1Array [][]string, BalanceSheet2Array [][]string, BalanceSheet1Classifications BalanceSheetLineItemClassifications, BalanceSheet2Classifications BalanceSheetLineItemClassifications) map[string][]string {
-
+func CombineLineItemNamesOfTwoBalanceSheetsIntoOne(BalanceSheet1Array [][]string, BalanceSheet2Array [][]string, BalanceSheet1Classifications BalanceSheetLineItemClassifications, BalanceSheet2Classifications BalanceSheetLineItemClassifications) (CombinedBalanceSheetLineItems map[string][]string, err error) {
 	// Combine current assets
-	BalanceSheetCombinedCurrentAssetLineItems := HelperFunction_CombineBalanceSheetSectionLineItemNames(
+	BalanceSheetCombinedCurrentAssetLineItems, err := HelperFunction_CombineBalanceSheetSectionLineItemNames(
 		BalanceSheet1Array, BalanceSheet2Array,
 		BalanceSheet1Classifications.CurrentAssets, BalanceSheet1Classifications.TotalAssets,
 		BalanceSheet2Classifications.CurrentAssets, BalanceSheet2Classifications.TotalAssets,
 	)
+	if err != nil {
+		fmt.Println(err)
+	}
 	// Combine non-current assets
-	BalanceSheetCombinedNonCurrentAssetLineItems := HelperFunction_CombineBalanceSheetSectionLineItemNames(
+	BalanceSheetCombinedNonCurrentAssetLineItems, err := HelperFunction_CombineBalanceSheetSectionLineItemNames(
 		BalanceSheet1Array, BalanceSheet2Array,
 		BalanceSheet1Classifications.TotalCurrentAssets+1, BalanceSheet1Classifications.TotalAssets,
 		BalanceSheet2Classifications.TotalCurrentAssets+1, BalanceSheet2Classifications.TotalAssets,
 	)
+	if err != nil {
+		fmt.Println(err)
+	}
 	// Combine current liabilities
-	BalanceSheetCombinedCurrentLiabilitiesLineItems := HelperFunction_CombineBalanceSheetSectionLineItemNames(
+	BalanceSheetCombinedCurrentLiabilitiesLineItems, err := HelperFunction_CombineBalanceSheetSectionLineItemNames(
 		BalanceSheet1Array, BalanceSheet2Array,
 		BalanceSheet1Classifications.CurrentLiabilities, BalanceSheet1Classifications.TotalLiabilities,
 		BalanceSheet2Classifications.CurrentLiabilities, BalanceSheet2Classifications.TotalLiabilities,
 	)
+	if err != nil {
+		fmt.Println(err)
+	}
 	// Combine non-current liabilities
-	BalanceSheetCombinedNonCurrentLiabilitiesLineItems := HelperFunction_CombineBalanceSheetSectionLineItemNames(
+	BalanceSheetCombinedNonCurrentLiabilitiesLineItems, err := HelperFunction_CombineBalanceSheetSectionLineItemNames(
 		BalanceSheet1Array, BalanceSheet2Array,
 		BalanceSheet1Classifications.TotalCurrentLiabilities+1, BalanceSheet1Classifications.TotalLiabilities,
 		BalanceSheet2Classifications.TotalCurrentLiabilities+1, BalanceSheet2Classifications.TotalLiabilities,
 	)
+	if err != nil {
+		fmt.Println(err)
+	}
 	// Combine stockholders equity
-	BalanceSheetCombinedStockholdersEquityLineItems := HelperFunction_CombineBalanceSheetSectionLineItemNames(
+	BalanceSheetCombinedStockholdersEquityLineItems, err := HelperFunction_CombineBalanceSheetSectionLineItemNames(
 		BalanceSheet1Array, BalanceSheet2Array,
 		BalanceSheet1Classifications.StockholdersEquity, BalanceSheet1Classifications.TotalStockholdersEquity,
 		BalanceSheet2Classifications.StockholdersEquity, BalanceSheet2Classifications.TotalStockholdersEquity,
 	)
+	if err != nil {
+		fmt.Println(err)
+	}
 	// Combine other equities
 	BalanceSheetCombinedOtherEquitiesLineItems := []string{}
 	//loop thru other equities indexes of BS1 and add it to combinedOtherEquitiesLineItems
@@ -104,7 +222,8 @@ func combineLineItemNamesOfTwoBalanceSheetsIntoOne(BalanceSheet1Array [][]string
 		"NonCurrentLiabilitiesLineItemNames": BalanceSheetCombinedNonCurrentLiabilitiesLineItems,
 		"StockholdersEquityLineItemNames":    BalanceSheetCombinedStockholdersEquityLineItems,
 		"OtherEquitiesLineItemNames":         BalanceSheetCombinedOtherEquitiesLineItems,
-	}
+	}, nil
+
 }
 
 func TesterFunction(CIK string, client *mongo.Client) {
@@ -138,7 +257,7 @@ func TesterFunction(CIK string, client *mongo.Client) {
 
 }
 
-func classifyBalanceSheetLineItems(financialStatementArray [][]string) (BalanceSheetLineItemClassifications, error) {
+func classifyBalanceSheetLineItems(BalanceSheetArray [][]string) (BalanceSheetLineItemClassifications, error) {
 	var (
 		currentAssetsRowIndex                        int = -1 // Using -1 as sentinel value
 		totalCurrentAssetsRowIndex                   int = -1
@@ -153,9 +272,9 @@ func classifyBalanceSheetLineItems(financialStatementArray [][]string) (BalanceS
 
 	var otherEquitiesRowIndex []int
 
-	var accessionNumber string = financialStatementArray[0][1]
+	var accessionNumber string = BalanceSheetArray[0][1]
 	var separatorRowIndex int
-	for i, row := range financialStatementArray {
+	for i, row := range BalanceSheetArray {
 		if row[0] == "separator" {
 			separatorRowIndex = i
 			break
@@ -163,8 +282,8 @@ func classifyBalanceSheetLineItems(financialStatementArray [][]string) (BalanceS
 	}
 
 	//find all the line items in the balance sheet
-	for i := separatorRowIndex + 1; i < len(financialStatementArray); i++ {
-		row := financialStatementArray[i]
+	for i := separatorRowIndex + 1; i < len(BalanceSheetArray); i++ {
+		row := BalanceSheetArray[i]
 
 		if containsAny(row[0], []string{"Current Assets", "Current assets"}) && currentAssetsRowIndex == -1 {
 			currentAssetsRowIndex = i
@@ -197,8 +316,8 @@ func classifyBalanceSheetLineItems(financialStatementArray [][]string) (BalanceS
 	}
 
 	if totalLiabilitiesRowIndex != -1 && stockholdersEquityRowIndex != -1 && totalStockholdersEquityRowIndex != -1 && totalLiabilitiesEquityAndOtherEquityRowIndex != -1 {
-		for i := totalLiabilitiesRowIndex + 1; i < len(financialStatementArray); i++ {
-			row := financialStatementArray[i]
+		for i := totalLiabilitiesRowIndex + 1; i < len(BalanceSheetArray); i++ {
+			row := BalanceSheetArray[i]
 			//if there are data cells after total liabilities, and before stockholders equity, then those are Other equity line items
 			if i > totalLiabilitiesRowIndex &&
 				i < stockholdersEquityRowIndex &&
@@ -267,8 +386,8 @@ func classifyBalanceSheetLineItems(financialStatementArray [][]string) (BalanceS
 
 	//check if all data cell rows are accouneted for
 	var dataCellRowIndex []int
-	for i := separatorRowIndex + 1; i < len(financialStatementArray); i++ {
-		if DoesDataCellExistInThisRow(financialStatementArray[i]) {
+	for i := separatorRowIndex + 1; i < len(BalanceSheetArray); i++ {
+		if DoesDataCellExistInThisRow(BalanceSheetArray[i]) {
 			dataCellRowIndex = append(dataCellRowIndex, i)
 		}
 	}
@@ -318,7 +437,7 @@ func classifyBalanceSheetLineItems(financialStatementArray [][]string) (BalanceS
 	//check if OtherEquities have duplicate line item names
 	var lineItemNames []string
 	for _, rowIndex := range otherEquitiesRowIndex {
-		lineItemName := financialStatementArray[rowIndex][0]
+		lineItemName := BalanceSheetArray[rowIndex][0]
 		// Check for exact match
 		for _, existingName := range lineItemNames {
 			if lineItemName == existingName {
