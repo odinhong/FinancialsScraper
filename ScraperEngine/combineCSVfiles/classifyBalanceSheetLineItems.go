@@ -19,6 +19,56 @@ type BalanceSheetLineItemClassifications struct {
 	OtherEquities                        []int
 }
 
+func TesterFunction(CIK string, client *mongo.Client) {
+	BalanceSheetArrays, _, _, _, err := GetCsvRfilesIntoArrayVariables(CIK, client)
+	if err != nil {
+		fmt.Println("Error getting CSV files:", err)
+		return
+	}
+
+	var failedAccessionNumbers []string
+
+	var balanceSheetLineItemClassificationsSlice []BalanceSheetLineItemClassifications
+	for i := 0; i < len(BalanceSheetArrays); i++ {
+		BalanceSheetArray := BalanceSheetArrays[i]
+		accessionNumber := BalanceSheetArray[0][1]
+		BalanceSheetLineItemClassifications, err := classifyBalanceSheetLineItems(BalanceSheetArray)
+		if err != nil {
+			fmt.Printf("Error classifying balance sheet line items for accession number %s: %v\n", accessionNumber, err)
+			failedAccessionNumbers = append(failedAccessionNumbers, accessionNumber)
+			//remove the balance sheet from the slice
+			BalanceSheetArrays = append(BalanceSheetArrays[:i], BalanceSheetArrays[i+1:]...)
+			i-- // Decrement i since we removed an element
+			continue
+		}
+		balanceSheetLineItemClassificationsSlice = append(balanceSheetLineItemClassificationsSlice, BalanceSheetLineItemClassifications)
+		// fmt.Printf("Successfully classified balance sheet for accession number: %s\n", accessionNumber)
+		// fmt.Printf("Classifications: %+v\n", BalanceSheetLineItemClassifications)
+	}
+
+	if len(failedAccessionNumbers) > 0 {
+		fmt.Println("\nFailed to classify the following accession numbers:")
+		for _, accNum := range failedAccessionNumbers {
+			fmt.Printf("- %s\n", accNum)
+		}
+		fmt.Printf("Total failures: %d\n", len(failedAccessionNumbers))
+	}
+
+	if len(balanceSheetLineItemClassificationsSlice) != len(BalanceSheetArrays) {
+		fmt.Println("Error: Number of balance sheets classified does not match number of balance sheets")
+	}
+	// fmt.Println(balanceSheetLineItemClassificationsSlice)
+
+	combinedBalanceSheetArray := BalanceSheetArrays[0]
+	// for i := 0; i < len(balanceSheetLineItemClassificationsSlice)-1; i++ {
+	// 	combinedBalanceSheetArray = CombineTwoBalanceSheets(combinedBalanceSheetArray, BalanceSheetArrays[i+1])
+	// }
+	for i := 0; i < 1; i++ {
+		combinedBalanceSheetArray = CombineTwoBalanceSheets(combinedBalanceSheetArray, BalanceSheetArrays[i+1])
+	}
+	// fmt.Printf("Combined balance sheet: %+v\n", combinedBalanceSheetArray)
+}
+
 func CombineTwoBalanceSheets(BalanceSheet1Array [][]string, BalanceSheet2Array [][]string) (CombinedBalanceSheet [][]string) {
 
 	//go thru the combinedBalanceSheetLineItems and essentailly create a new balance sheet
@@ -26,47 +76,52 @@ func CombineTwoBalanceSheets(BalanceSheet1Array [][]string, BalanceSheet2Array [
 	// and for each cell we do find a value that matches all the left col and top rows for the given cell in two input balancesheet arrays
 
 	separatorRowIndex := -1
-	accessionNumberRowIndex := -1
-	formIndex := -1
+	// accessionNumberRowIndex := -1
+	// formIndex := -1
 	reportDateIndex := -1
 	reportPeriodIndex := -1
 
-	for rowIndex, row := range BalanceSheet1Array {
-		switch row[0] {
-		case "separator":
-			separatorRowIndex = rowIndex
-		case "accessionNumber":
-			accessionNumberRowIndex = rowIndex
-		case "form":
-			formIndex = rowIndex
-		case "reportDate":
-			reportDateIndex = rowIndex
-		case "reportPeriod":
-			reportPeriodIndex = rowIndex
-		default:
-			// handle any other cases
+	for i, row := range BalanceSheet1Array {
+		if len(row) == 0 {
+			continue // Skip empty rows
 		}
+		if row[0] == "separator" {
+			separatorRowIndex = i
+			break
+		}
+		if row[0] == "reportDate" {
+			reportDateIndex = i
+		}
+		if row[0] == "reportPeriod" {
+			reportPeriodIndex = i
+		}
+		// if row[0] == "accessionNumber" {
+		// 	accessionNumberRowIndex = i
+		// }
+		// if row[0] == "form" {
+		// 	formIndex = i
+		// }
 	}
 
 	var combinedBalanceSheetArray [][]string
 	//add in metadata of first balance sheet
-	for i := 0; i < separatorRowIndex; i++ {
+	for i := 0; i <= separatorRowIndex; i++ {
 		combinedBalanceSheetArray = append(combinedBalanceSheetArray, BalanceSheet1Array[i])
 	}
 	//add in metadata of second balance sheet
-	for i := 0; i < separatorRowIndex; i++ {
+	for i := 0; i <= separatorRowIndex; i++ {
 		for j := 1; j < len(BalanceSheet2Array[0]); j++ {
 			combinedBalanceSheetArray[i] = append(combinedBalanceSheetArray[i], BalanceSheet2Array[i][j])
 		}
 	}
+
 	//get the index of the cols in order it should be in
 	rearrangedColumnIndices := GetIndexOfRearrangedColumnsByReportPeriodAndDate(combinedBalanceSheetArray, reportPeriodIndex, reportDateIndex)
-	//rearrange the columns in order
-	for targetIndex, sourceIndex := range rearrangedColumnIndices {
-		if targetIndex+1 != sourceIndex {
-			combinedBalanceSheetArray = RearrangeColumns(combinedBalanceSheetArray, sourceIndex, targetIndex+1)
-		}
-	}
+
+	// Rearrange all columns at once
+	combinedBalanceSheetArray = RearrangeAllColumns(combinedBalanceSheetArray, rearrangedColumnIndices)
+
+	fmt.Println(combinedBalanceSheetArray)
 
 	//add in line item names
 	BalanceSheet1Classifications, err := classifyBalanceSheetLineItems(BalanceSheet1Array)
@@ -106,6 +161,12 @@ func CombineTwoBalanceSheets(BalanceSheet1Array [][]string, BalanceSheet2Array [
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Liabilities and Stockholders' Equity"})
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Other Equities"})
 	HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, OtherEquitiesLineItemNames)
+
+	// fmt.Println(combinedBalanceSheetArray)
+	return combinedBalanceSheetArray
+	//now do lookup and fill in the values
+	//need to account for the fact that some line items in other equities have exact same so we need to keep track of which index have been accounted for in each balance sheet
+	//basically once we fill in a cell, we need to keep track that particualr cell has been used in individual balance sheet
 }
 
 func HelperFunction_AppendLineItemNamesToBalanceSheetArray(BalanceSheetArray [][]string, lineItemNames []string) {
@@ -124,12 +185,15 @@ func HelperFunction_CombineBalanceSheetSectionLineItemNames(BalanceSheet1Array [
 	// Process BalanceSheet1
 	for i := startIndex1; i < endIndex1; i++ {
 		row := BalanceSheet1Array[i]
+		if len(row) == 0 {
+			continue // Skip empty rows
+		}
 		lineItemName := row[0]
 		if DoesDataCellExistInThisRow(row) {
 			combinedLineItemsNames = append(combinedLineItemsNames, lineItemName)
 		} else {
 			err := fmt.Errorf("row %d is empty", i)
-			fmt.Println(err)
+			// fmt.Println(err)
 			return nil, err
 		}
 	}
@@ -137,12 +201,15 @@ func HelperFunction_CombineBalanceSheetSectionLineItemNames(BalanceSheet1Array [
 	// Process BalanceSheet2
 	for i := startIndex2; i < endIndex2; i++ {
 		row := BalanceSheet2Array[i]
+		if len(row) == 0 {
+			continue // Skip empty rows
+		}
 		lineItemName := row[0]
 		if DoesDataCellExistInThisRow(row) && !CheckIfLineItemNameIsInLineItemNameList(lineItemName, combinedLineItemsNames) {
 			combinedLineItemsNames = append(combinedLineItemsNames, lineItemName)
 		} else {
 			err := fmt.Errorf("row %d is empty", i)
-			fmt.Println(err)
+			// fmt.Println(err)
 			return nil, err
 		}
 	}
@@ -202,6 +269,9 @@ func CombineLineItemNamesOfTwoBalanceSheetsIntoOne(BalanceSheet1Array [][]string
 	//loop thru other equities indexes of BS2 and compare
 	for _, rowIndex := range BalanceSheet1Classifications.OtherEquities {
 		row := BalanceSheet1Array[rowIndex]
+		if len(row) == 0 {
+			continue // Skip empty rows
+		}
 		lineItemName := row[0]
 		if DoesDataCellExistInThisRow(row) {
 			BalanceSheetCombinedOtherEquitiesLineItems = append(BalanceSheetCombinedOtherEquitiesLineItems, lineItemName)
@@ -209,6 +279,9 @@ func CombineLineItemNamesOfTwoBalanceSheetsIntoOne(BalanceSheet1Array [][]string
 	}
 	for _, rowIndex := range BalanceSheet2Classifications.OtherEquities {
 		row := BalanceSheet2Array[rowIndex]
+		if len(row) == 0 {
+			continue // Skip empty rows
+		}
 		lineItemName := row[0]
 		if DoesDataCellExistInThisRow(row) && !CheckIfLineItemNameIsInLineItemNameList(lineItemName, BalanceSheetCombinedOtherEquitiesLineItems) {
 			BalanceSheetCombinedOtherEquitiesLineItems = append(BalanceSheetCombinedOtherEquitiesLineItems, lineItemName)
@@ -223,37 +296,6 @@ func CombineLineItemNamesOfTwoBalanceSheetsIntoOne(BalanceSheet1Array [][]string
 		"StockholdersEquityLineItemNames":    BalanceSheetCombinedStockholdersEquityLineItems,
 		"OtherEquitiesLineItemNames":         BalanceSheetCombinedOtherEquitiesLineItems,
 	}, nil
-
-}
-
-func TesterFunction(CIK string, client *mongo.Client) {
-	BalanceSheetArrays, _, _, _, err := GetCsvRfilesIntoArrayVariables(CIK, client)
-	if err != nil {
-		fmt.Println("Error getting CSV files:", err)
-		return
-	}
-
-	var failedAccessionNumbers []string
-
-	for _, BalanceSheetArray := range BalanceSheetArrays {
-		accessionNumber := BalanceSheetArray[0][1]
-		BalanceSheetLineItemClassifications, err := classifyBalanceSheetLineItems(BalanceSheetArray)
-		if err != nil {
-			fmt.Printf("Error classifying balance sheet line items for accession number %s: %v\n", accessionNumber, err)
-			failedAccessionNumbers = append(failedAccessionNumbers, accessionNumber)
-			continue
-		}
-		fmt.Printf("Successfully classified balance sheet for accession number: %s\n", accessionNumber)
-		fmt.Printf("Classifications: %+v\n", BalanceSheetLineItemClassifications)
-	}
-
-	if len(failedAccessionNumbers) > 0 {
-		fmt.Println("\nFailed to classify the following accession numbers:")
-		for _, accNum := range failedAccessionNumbers {
-			fmt.Printf("- %s\n", accNum)
-		}
-		fmt.Printf("Total failures: %d\n", len(failedAccessionNumbers))
-	}
 
 }
 
@@ -272,9 +314,20 @@ func classifyBalanceSheetLineItems(BalanceSheetArray [][]string) (BalanceSheetLi
 
 	var otherEquitiesRowIndex []int
 
+	// Check if array is empty or first row doesn't have enough elements
+	if len(BalanceSheetArray) == 0 {
+		return BalanceSheetLineItemClassifications{}, fmt.Errorf("empty balance sheet array")
+	}
+	if len(BalanceSheetArray[0]) < 2 {
+		return BalanceSheetLineItemClassifications{}, fmt.Errorf("first row of balance sheet doesn't have enough elements: got %d, want at least 2", len(BalanceSheetArray[0]))
+	}
+
 	var accessionNumber string = BalanceSheetArray[0][1]
 	var separatorRowIndex int
 	for i, row := range BalanceSheetArray {
+		if len(row) == 0 {
+			continue // Skip empty rows
+		}
 		if row[0] == "separator" {
 			separatorRowIndex = i
 			break
@@ -284,7 +337,9 @@ func classifyBalanceSheetLineItems(BalanceSheetArray [][]string) (BalanceSheetLi
 	//find all the line items in the balance sheet
 	for i := separatorRowIndex + 1; i < len(BalanceSheetArray); i++ {
 		row := BalanceSheetArray[i]
-
+		if len(row) == 0 {
+			continue // Skip empty rows
+		}
 		if containsAny(row[0], []string{"Current Assets", "Current assets"}) && currentAssetsRowIndex == -1 {
 			currentAssetsRowIndex = i
 		}
@@ -318,6 +373,9 @@ func classifyBalanceSheetLineItems(BalanceSheetArray [][]string) (BalanceSheetLi
 	if totalLiabilitiesRowIndex != -1 && stockholdersEquityRowIndex != -1 && totalStockholdersEquityRowIndex != -1 && totalLiabilitiesEquityAndOtherEquityRowIndex != -1 {
 		for i := totalLiabilitiesRowIndex + 1; i < len(BalanceSheetArray); i++ {
 			row := BalanceSheetArray[i]
+			if len(row) == 0 {
+				continue // Skip empty rows
+			}
 			//if there are data cells after total liabilities, and before stockholders equity, then those are Other equity line items
 			if i > totalLiabilitiesRowIndex &&
 				i < stockholdersEquityRowIndex &&
@@ -387,6 +445,9 @@ func classifyBalanceSheetLineItems(BalanceSheetArray [][]string) (BalanceSheetLi
 	//check if all data cell rows are accouneted for
 	var dataCellRowIndex []int
 	for i := separatorRowIndex + 1; i < len(BalanceSheetArray); i++ {
+		if len(BalanceSheetArray[i]) == 0 {
+			continue // Skip empty rows
+		}
 		if DoesDataCellExistInThisRow(BalanceSheetArray[i]) {
 			dataCellRowIndex = append(dataCellRowIndex, i)
 		}
@@ -417,18 +478,18 @@ func classifyBalanceSheetLineItems(BalanceSheetArray [][]string) (BalanceSheetLi
 			}
 		}
 		if !found {
-			fmt.Println(
-				"currentAssets", currentAssetsRowIndex,
-				"totalCurrentAssets", totalCurrentAssetsRowIndex,
-				"totalAssets", totalAssetsRowIndex,
-				"currentLiabilities", currentLiabilitiesRowIndex,
-				"totalCurrentLiabilities", totalCurrentLiabilitiesRowIndex,
-				"totalLiabilities", totalLiabilitiesRowIndex,
-				"stockholdersEquity", stockholdersEquityRowIndex,
-				"totalStockholdersEquity", totalStockholdersEquityRowIndex,
-				"totalLiabilitiesEquityAndOtherEquity", totalLiabilitiesEquityAndOtherEquityRowIndex,
-				"otherEquities", otherEquitiesRowIndex,
-			)
+			// fmt.Println(
+			// 	"currentAssets", currentAssetsRowIndex,
+			// 	"totalCurrentAssets", totalCurrentAssetsRowIndex,
+			// 	"totalAssets", totalAssetsRowIndex,
+			// 	"currentLiabilities", currentLiabilitiesRowIndex,
+			// 	"totalCurrentLiabilities", totalCurrentLiabilitiesRowIndex,
+			// 	"totalLiabilities", totalLiabilitiesRowIndex,
+			// 	"stockholdersEquity", stockholdersEquityRowIndex,
+			// 	"totalStockholdersEquity", totalStockholdersEquityRowIndex,
+			// 	"totalLiabilitiesEquityAndOtherEquity", totalLiabilitiesEquityAndOtherEquityRowIndex,
+			// 	"otherEquities", otherEquitiesRowIndex,
+			// )
 			return BalanceSheetLineItemClassifications{},
 				fmt.Errorf("accession number: %s - found unaccounted data cell at row %d", accessionNumber, dataRow)
 		}
@@ -437,11 +498,15 @@ func classifyBalanceSheetLineItems(BalanceSheetArray [][]string) (BalanceSheetLi
 	//check if OtherEquities have duplicate line item names
 	var lineItemNames []string
 	for _, rowIndex := range otherEquitiesRowIndex {
-		lineItemName := BalanceSheetArray[rowIndex][0]
+		row := BalanceSheetArray[rowIndex]
+		if len(row) == 0 {
+			continue // Skip empty rows
+		}
+		lineItemName := row[0]
 		// Check for exact match
 		for _, existingName := range lineItemNames {
 			if lineItemName == existingName {
-				return BalanceSheetLineItemClassifications{}, fmt.Errorf("duplicate lineItemName found in OtherEquities: %s", lineItemName)
+				return BalanceSheetLineItemClassifications{}, fmt.Errorf("duplicate lineItemName found in the financial statement: OtherEquities: %s", lineItemName)
 			}
 		}
 		lineItemNames = append(lineItemNames, lineItemName)

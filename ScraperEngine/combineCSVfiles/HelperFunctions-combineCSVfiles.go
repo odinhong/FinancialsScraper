@@ -53,8 +53,9 @@ func GetIndexOfRearrangedColumnsByReportPeriodAndDate(data [][]string, reportPer
 	return result
 }
 
-// RearrangeColumns moves a specified column to a new position in a 2D array
-func RearrangeColumns(data [][]string, fromIndex, toIndex int) [][]string {
+// RearrangeAllColumns rearranges columns based on the desired indices
+// columnOrder contains indices for data columns (1 onwards)
+func RearrangeAllColumns(data [][]string, columnOrder []int) [][]string {
 	if len(data) == 0 {
 		return data
 	}
@@ -62,31 +63,16 @@ func RearrangeColumns(data [][]string, fromIndex, toIndex int) [][]string {
 	result := make([][]string, len(data))
 
 	for i := range data {
-		// Create a new row with the same length as the original
-		newRow := make([]string, len(data[i]))
+		row := make([]string, len(data[i]))
+		// Keep first column
+		row[0] = data[i][0]
 
-		// Copy elements before the insertion point
-		for j := 0; j < toIndex; j++ {
-			if j < fromIndex {
-				newRow[j] = data[i][j]
-			} else {
-				newRow[j] = data[i][j]
-			}
+		// Rearrange data columns (shifted by 1 since first column is preserved)
+		for newPos, oldPos := range columnOrder {
+			row[newPos+1] = data[i][oldPos]
 		}
 
-		// Insert the moved column
-		newRow[toIndex] = data[i][fromIndex]
-
-		// Copy remaining elements
-		for j := toIndex + 1; j < len(data[i]); j++ {
-			if j <= fromIndex {
-				newRow[j] = data[i][j-1]
-			} else {
-				newRow[j] = data[i][j]
-			}
-		}
-
-		result[i] = newRow
+		result[i] = row
 	}
 
 	return result
