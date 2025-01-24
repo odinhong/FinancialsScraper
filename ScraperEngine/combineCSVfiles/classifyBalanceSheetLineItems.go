@@ -121,8 +121,6 @@ func CombineTwoBalanceSheets(BalanceSheet1Array [][]string, BalanceSheet2Array [
 	// Rearrange all columns at once
 	combinedBalanceSheetArray = RearrangeAllColumns(combinedBalanceSheetArray, rearrangedColumnIndices)
 
-	fmt.Println(combinedBalanceSheetArray)
-
 	//add in line item names
 	BalanceSheet1Classifications, err := classifyBalanceSheetLineItems(BalanceSheet1Array)
 	if err != nil {
@@ -136,6 +134,7 @@ func CombineTwoBalanceSheets(BalanceSheet1Array [][]string, BalanceSheet2Array [
 	if err != nil {
 		fmt.Println(err)
 	}
+
 	CurrentAssetsLineItemNames := combinedBalanceSheetLineItems["CurrentAssetsLineItemNames"]
 	NonCurrentAssetsLineItemNames := combinedBalanceSheetLineItems["NonCurrentAssetsLineItemNames"]
 	CurrentLiabilitiesLineItemNames := combinedBalanceSheetLineItems["CurrentLiabilitiesLineItemNames"]
@@ -144,36 +143,39 @@ func CombineTwoBalanceSheets(BalanceSheet1Array [][]string, BalanceSheet2Array [
 	OtherEquitiesLineItemNames := combinedBalanceSheetLineItems["OtherEquitiesLineItemNames"]
 
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Current Assets"})
-	HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, CurrentAssetsLineItemNames)
+	combinedBalanceSheetArray = HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, CurrentAssetsLineItemNames)
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Current Assets"})
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Non Current Assets"})
-	HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, NonCurrentAssetsLineItemNames)
+	combinedBalanceSheetArray = HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, NonCurrentAssetsLineItemNames)
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Assets"})
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Current Liabilities"})
-	HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, CurrentLiabilitiesLineItemNames)
+	combinedBalanceSheetArray = HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, CurrentLiabilitiesLineItemNames)
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Current Liabilities"})
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Non Current Liabilities"})
-	HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, NonCurrentLiabilitiesLineItemNames)
+	combinedBalanceSheetArray = HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, NonCurrentLiabilitiesLineItemNames)
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Liabilities"})
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Stockholders Equity"})
-	HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, StockholdersEquityLineItemNames)
+	combinedBalanceSheetArray = HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, StockholdersEquityLineItemNames)
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Stockholders' Equity"})
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Liabilities and Stockholders' Equity"})
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Other Equities"})
-	HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, OtherEquitiesLineItemNames)
+	combinedBalanceSheetArray = HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, OtherEquitiesLineItemNames)
 
-	// fmt.Println(combinedBalanceSheetArray)
+	fmt.Println(combinedBalanceSheetArray)
+
 	return combinedBalanceSheetArray
 	//now do lookup and fill in the values
 	//need to account for the fact that some line items in other equities have exact same so we need to keep track of which index have been accounted for in each balance sheet
 	//basically once we fill in a cell, we need to keep track that particualr cell has been used in individual balance sheet
 }
 
-func HelperFunction_AppendLineItemNamesToBalanceSheetArray(BalanceSheetArray [][]string, lineItemNames []string) {
+func HelperFunction_AppendLineItemNamesToBalanceSheetArray(BalanceSheetArray [][]string, lineItemNames []string) [][]string {
 	//add in line item names
+	updatedBalanceSheetArray := BalanceSheetArray
 	for i := 0; i < len(lineItemNames); i++ {
-		BalanceSheetArray = append(BalanceSheetArray, []string{lineItemNames[i]})
+		updatedBalanceSheetArray = append(updatedBalanceSheetArray, []string{lineItemNames[i]})
 	}
+	return updatedBalanceSheetArray
 }
 
 // this function is used to comnbine a section of two balance sheets line item names
@@ -188,13 +190,12 @@ func HelperFunction_CombineBalanceSheetSectionLineItemNames(BalanceSheet1Array [
 		if len(row) == 0 {
 			continue // Skip empty rows
 		}
+
 		lineItemName := row[0]
 		if DoesDataCellExistInThisRow(row) {
 			combinedLineItemsNames = append(combinedLineItemsNames, lineItemName)
 		} else {
-			err := fmt.Errorf("row %d is empty", i)
-			// fmt.Println(err)
-			return nil, err
+			continue
 		}
 	}
 
@@ -208,9 +209,9 @@ func HelperFunction_CombineBalanceSheetSectionLineItemNames(BalanceSheet1Array [
 		if DoesDataCellExistInThisRow(row) && !CheckIfLineItemNameIsInLineItemNameList(lineItemName, combinedLineItemsNames) {
 			combinedLineItemsNames = append(combinedLineItemsNames, lineItemName)
 		} else {
-			err := fmt.Errorf("row %d is empty", i)
-			// fmt.Println(err)
-			return nil, err
+
+			continue
+
 		}
 	}
 
@@ -221,8 +222,9 @@ func CombineLineItemNamesOfTwoBalanceSheetsIntoOne(BalanceSheet1Array [][]string
 	// Combine current assets
 	BalanceSheetCombinedCurrentAssetLineItems, err := HelperFunction_CombineBalanceSheetSectionLineItemNames(
 		BalanceSheet1Array, BalanceSheet2Array,
-		BalanceSheet1Classifications.CurrentAssets, BalanceSheet1Classifications.TotalAssets,
-		BalanceSheet2Classifications.CurrentAssets, BalanceSheet2Classifications.TotalAssets,
+		BalanceSheet1Classifications.CurrentAssets+1, BalanceSheet1Classifications.TotalCurrentAssets,
+		BalanceSheet2Classifications.CurrentAssets+1, BalanceSheet2Classifications.TotalCurrentAssets,
+		//adding one because the startingIndex is the row that contains header "current assets"
 	)
 	if err != nil {
 		fmt.Println(err)
@@ -239,8 +241,9 @@ func CombineLineItemNamesOfTwoBalanceSheetsIntoOne(BalanceSheet1Array [][]string
 	// Combine current liabilities
 	BalanceSheetCombinedCurrentLiabilitiesLineItems, err := HelperFunction_CombineBalanceSheetSectionLineItemNames(
 		BalanceSheet1Array, BalanceSheet2Array,
-		BalanceSheet1Classifications.CurrentLiabilities, BalanceSheet1Classifications.TotalLiabilities,
-		BalanceSheet2Classifications.CurrentLiabilities, BalanceSheet2Classifications.TotalLiabilities,
+		BalanceSheet1Classifications.CurrentLiabilities+1, BalanceSheet1Classifications.TotalCurrentLiabilities,
+		BalanceSheet2Classifications.CurrentLiabilities+1, BalanceSheet2Classifications.TotalCurrentLiabilities,
+		//adding one because the startingIndex is the row that contains header "current liabilities"
 	)
 	if err != nil {
 		fmt.Println(err)
@@ -257,8 +260,10 @@ func CombineLineItemNamesOfTwoBalanceSheetsIntoOne(BalanceSheet1Array [][]string
 	// Combine stockholders equity
 	BalanceSheetCombinedStockholdersEquityLineItems, err := HelperFunction_CombineBalanceSheetSectionLineItemNames(
 		BalanceSheet1Array, BalanceSheet2Array,
-		BalanceSheet1Classifications.StockholdersEquity, BalanceSheet1Classifications.TotalStockholdersEquity,
-		BalanceSheet2Classifications.StockholdersEquity, BalanceSheet2Classifications.TotalStockholdersEquity,
+		BalanceSheet1Classifications.StockholdersEquity+1, BalanceSheet1Classifications.TotalStockholdersEquity,
+		BalanceSheet2Classifications.StockholdersEquity+1, BalanceSheet2Classifications.TotalStockholdersEquity,
+		//adding one because the startingIndex is the row that contains header "stockholders equity"
+
 	)
 	if err != nil {
 		fmt.Println(err)

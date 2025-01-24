@@ -53,8 +53,7 @@ func GetIndexOfRearrangedColumnsByReportPeriodAndDate(data [][]string, reportPer
 	return result
 }
 
-// RearrangeAllColumns rearranges columns based on the desired indices
-// columnOrder contains indices for data columns (1 onwards)
+// RearrangeAllColumns rearranges columns based on the desired indices, preserving the first column for headers
 func RearrangeAllColumns(data [][]string, columnOrder []int) [][]string {
 	if len(data) == 0 {
 		return data
