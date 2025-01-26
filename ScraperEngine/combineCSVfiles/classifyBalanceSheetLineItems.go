@@ -2,6 +2,7 @@ package combinecsvfiles
 
 import (
 	"fmt"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -134,7 +135,6 @@ func CombineTwoBalanceSheets(BalanceSheet1Array [][]string, BalanceSheet2Array [
 	if err != nil {
 		fmt.Println(err)
 	}
-
 	CurrentAssetsLineItemNames := combinedBalanceSheetLineItems["CurrentAssetsLineItemNames"]
 	NonCurrentAssetsLineItemNames := combinedBalanceSheetLineItems["NonCurrentAssetsLineItemNames"]
 	CurrentLiabilitiesLineItemNames := combinedBalanceSheetLineItems["CurrentLiabilitiesLineItemNames"]
@@ -161,12 +161,28 @@ func CombineTwoBalanceSheets(BalanceSheet1Array [][]string, BalanceSheet2Array [
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Other Equities"})
 	combinedBalanceSheetArray = HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, OtherEquitiesLineItemNames)
 
-	fmt.Println(combinedBalanceSheetArray)
+	//add in "" empty string cells for FillInDataCellsToEmptyCombinedStatement to fill in
+	//using first row which is accessionNumber row to know how many cells to add
+	targetLength := len(combinedBalanceSheetArray[0])
+	for i := 0; i < len(combinedBalanceSheetArray); i++ {
+		emptyStringsNeeded := targetLength - len(combinedBalanceSheetArray[i])
+		if emptyStringsNeeded > 0 {
+			emptyStrings := make([]string, emptyStringsNeeded)
+			combinedBalanceSheetArray[i] = append(combinedBalanceSheetArray[i], emptyStrings...)
+		}
+	}
+
+	combinedBalanceSheetArray, err = FillInDataCellsToEmptyCombinedStatement(combinedBalanceSheetArray, BalanceSheet1Array, BalanceSheet2Array)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	fmt.Println("Filled Combined Balance Sheet:")
+	for _, row := range combinedBalanceSheetArray {
+		fmt.Printf("%s\n", strings.Join(row, ", "))
+	}
 
 	return combinedBalanceSheetArray
-	//now do lookup and fill in the values
-	//need to account for the fact that some line items in other equities have exact same so we need to keep track of which index have been accounted for in each balance sheet
-	//basically once we fill in a cell, we need to keep track that particualr cell has been used in individual balance sheet
 }
 
 func HelperFunction_AppendLineItemNamesToBalanceSheetArray(BalanceSheetArray [][]string, lineItemNames []string) [][]string {

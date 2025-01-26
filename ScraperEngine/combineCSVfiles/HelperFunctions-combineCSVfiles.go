@@ -1,11 +1,167 @@
 package combinecsvfiles
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 )
+
+func FillInDataCellsToEmptyCombinedStatement(emptyCombinedStatement [][]string, OriginalStatement1 [][]string, OriginalStatement2 [][]string) (FilledCombinedStatement [][]string, err error) {
+	//use the header cells and metadata cells to essentially do a lookup on the original statements to fill in the data cells
+
+	//find all required row indices
+	separatorRowIndexStatement1 := -1
+	accessionNumberRowIndexStatement1 := -1
+	reportDateRowIndexStatement1 := -1
+	reportPeriodRowIndexStatement1 := -1
+	separatorRowIndexStatement2 := -1
+	accessionNumberRowIndexStatement2 := -1
+	reportDateRowIndexStatement2 := -1
+	reportPeriodRowIndexStatement2 := -1
+
+	for i := 0; i < len(OriginalStatement1); i++ {
+		// Clean the string by removing BOM and trimming whitespace
+		cleanedString := removeBOM(strings.TrimSpace(OriginalStatement1[i][0]))
+		switch cleanedString {
+		case "separator":
+			separatorRowIndexStatement1 = i
+		case "accessionNumber":
+			accessionNumberRowIndexStatement1 = i
+		case "reportDate":
+			reportDateRowIndexStatement1 = i
+		case "reportPeriod":
+			reportPeriodRowIndexStatement1 = i
+		}
+	}
+
+	for i := 0; i < len(OriginalStatement2); i++ {
+		// Clean the string by removing BOM and trimming whitespace
+		cleanedString := removeBOM(strings.TrimSpace(OriginalStatement2[i][0]))
+		switch cleanedString {
+		case "separator":
+			separatorRowIndexStatement2 = i
+		case "accessionNumber":
+			accessionNumberRowIndexStatement2 = i
+		case "reportDate":
+			reportDateRowIndexStatement2 = i
+		case "reportPeriod":
+			reportPeriodRowIndexStatement2 = i
+		}
+	}
+
+	//check if all the indices are found
+	if separatorRowIndexStatement1 == -1 || separatorRowIndexStatement2 == -1 {
+		err := errors.New("function FillInDataCellsToEmptyCombinedStatement: separator row not found")
+		return emptyCombinedStatement, err
+	}
+	if accessionNumberRowIndexStatement1 == -1 || accessionNumberRowIndexStatement2 == -1 {
+		err := errors.New("function FillInDataCellsToEmptyCombinedStatement: accessionNumber row not found")
+		return emptyCombinedStatement, err
+	}
+	if reportDateRowIndexStatement1 == -1 || reportDateRowIndexStatement2 == -1 {
+		err := errors.New("function FillInDataCellsToEmptyCombinedStatement: reportDate row not found")
+		return emptyCombinedStatement, err
+	}
+	if reportPeriodRowIndexStatement1 == -1 || reportPeriodRowIndexStatement2 == -1 {
+		err := errors.New("function FillInDataCellsToEmptyCombinedStatement: reportPeriod row not found")
+		return emptyCombinedStatement, err
+	}
+
+	//check if the report dates and report periods match
+	if separatorRowIndexStatement1 != separatorRowIndexStatement2 {
+		err := errors.New("function FillInDataCellsToEmptyCombinedStatement: separator row indices do not match")
+		return emptyCombinedStatement, err
+	}
+	if accessionNumberRowIndexStatement1 != accessionNumberRowIndexStatement2 {
+		err := errors.New("function FillInDataCellsToEmptyCombinedStatement: accessionNumber row indices do not match")
+		return emptyCombinedStatement, err
+	}
+	if reportDateRowIndexStatement1 != reportDateRowIndexStatement2 {
+		err := errors.New("function FillInDataCellsToEmptyCombinedStatement: reportDate row indices do not match")
+		return emptyCombinedStatement, err
+	}
+	if reportPeriodRowIndexStatement1 != reportPeriodRowIndexStatement2 {
+		err := errors.New("function FillInDataCellsToEmptyCombinedStatement: reportPeriod row indices do not match")
+		return emptyCombinedStatement, err
+	}
+
+	//fill in the data cells one by one
+	FilledCombinedStatement = emptyCombinedStatement
+	for i := separatorRowIndexStatement1 + 1; i < len(emptyCombinedStatement); i++ {
+		for j := 1; j < len(emptyCombinedStatement[0]); j++ {
+			lineItemName := emptyCombinedStatement[i][0]
+			accessionNumber := emptyCombinedStatement[accessionNumberRowIndexStatement1][j]
+			reportDate := emptyCombinedStatement[reportDateRowIndexStatement1][j]
+			reportPeriod := emptyCombinedStatement[reportPeriodRowIndexStatement1][j]
+			//check first statement to find the cellvalue, if not found, check the second statement
+			cellValue, err := LookupCellValueGivenHeaderAndMetadataCells(OriginalStatement1, lineItemName, accessionNumber, accessionNumberRowIndexStatement1, reportPeriod, reportPeriodRowIndexStatement1, reportDate, reportDateRowIndexStatement1)
+			if cellValue == "" && err != nil {
+				cellValue, _ = LookupCellValueGivenHeaderAndMetadataCells(OriginalStatement2, lineItemName, accessionNumber, accessionNumberRowIndexStatement2, reportPeriod, reportPeriodRowIndexStatement2, reportDate, reportDateRowIndexStatement2)
+			}
+
+			FilledCombinedStatement[i][j] = cellValue
+		}
+	}
+
+	return FilledCombinedStatement, nil
+}
+
+func LookupCellValueGivenHeaderAndMetadataCells(OriginalStatement [][]string, lineItemName string, accessionNumber string, accessionNumberRowIndex int, reportPeriod string, reportPeriodRowIndex int, reportDate string, reportDateRowIndex int) (cellValue string, err error) {
+	rowIndex := -1
+	columnIndex := -1
+
+	// Validate input parameters
+	if len(OriginalStatement) == 0 || len(OriginalStatement[0]) == 0 {
+		return "", errors.New("empty statement array")
+	}
+
+	// Helper function to normalize strings for comparison
+	normalizeString := func(s string) string {
+		// Convert to lowercase and remove all spaces
+		return strings.ReplaceAll(strings.ToLower(s), " ", "")
+	}
+
+	for i := 1; i < len(OriginalStatement); i++ {
+		if normalizeString(OriginalStatement[i][0]) == normalizeString(lineItemName) {
+			rowIndex = i
+			break
+		}
+	}
+
+	//go to each col and see which col meets all the conditions
+	for i := 1; i < len(OriginalStatement[0]); i++ {
+		if OriginalStatement[accessionNumberRowIndex][i] == accessionNumber {
+			if OriginalStatement[reportDateRowIndex][i] == reportDate {
+				if OriginalStatement[reportPeriodRowIndex][i] == reportPeriod {
+					columnIndex = i
+					break
+				}
+			}
+		}
+	}
+
+	if rowIndex == -1 || columnIndex == -1 {
+		return "", errors.New("could not locate cell")
+	}
+
+	// Additional bounds check before accessing the array
+	if rowIndex >= len(OriginalStatement) || columnIndex >= len(OriginalStatement[rowIndex]) {
+		return "", errors.New("index out of range")
+	}
+
+	cellValue = OriginalStatement[rowIndex][columnIndex]
+	return cellValue, nil
+}
+
+// removeBOM removes the UTF-8 Byte Order Mark from the beginning of a string if present
+func removeBOM(s string) string {
+	if strings.HasPrefix(s, "\ufeff") {
+		return strings.TrimPrefix(s, "\ufeff")
+	}
+	return s
+}
 
 // ColInfo holds information about a column for sorting
 type ColInfo struct {
