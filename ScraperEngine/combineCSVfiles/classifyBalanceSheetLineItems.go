@@ -2,7 +2,10 @@ package combinecsvfiles
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
+
+	utilityFunctions "github.com/Programmerdin/FinancialDataSite_Go/utilityFunctions"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -61,13 +64,29 @@ func TesterFunction(CIK string, client *mongo.Client) {
 	// fmt.Println(balanceSheetLineItemClassificationsSlice)
 
 	combinedBalanceSheetArray := BalanceSheetArrays[0]
-	// for i := 0; i < len(balanceSheetLineItemClassificationsSlice)-1; i++ {
-	// 	combinedBalanceSheetArray = CombineTwoBalanceSheets(combinedBalanceSheetArray, BalanceSheetArrays[i+1])
-	// }
-	for i := 0; i < 1; i++ {
+	for i := 0; i < len(balanceSheetLineItemClassificationsSlice)-1; i++ {
 		combinedBalanceSheetArray = CombineTwoBalanceSheets(combinedBalanceSheetArray, BalanceSheetArrays[i+1])
 	}
-	// fmt.Printf("Combined balance sheet: %+v\n", combinedBalanceSheetArray)
+
+	fmt.Print("Combined Balance Sheet Array: [\n")
+	for i, row := range combinedBalanceSheetArray {
+		fmt.Printf("  [%s]", strings.Join(row, ", "))
+		if i < len(combinedBalanceSheetArray)-1 {
+			fmt.Print(",")
+		}
+		fmt.Print("\n")
+	}
+	fmt.Print("]\n")
+
+	//convert combinedBalanceSheetArray to csv file and save it to SEC-files/combinedFinancialStatements
+	directory := filepath.Join("SEC-files", "combinedFinancialStatements")
+	fileName := CIK + "_combinedBalanceSheetLevel1.csv"
+	if err := utilityFunctions.Save2DarrayToCsvFile(combinedBalanceSheetArray, directory, fileName); err != nil {
+		fmt.Printf("Error saving CSV file: %v\n", err)
+		return
+	}
+	fmt.Printf("Successfully saved combined balance sheet to %s\n", filepath.Join(directory, fileName))
+
 }
 
 func CombineTwoBalanceSheets(BalanceSheet1Array [][]string, BalanceSheet2Array [][]string) (CombinedBalanceSheet [][]string) {
@@ -175,11 +194,6 @@ func CombineTwoBalanceSheets(BalanceSheet1Array [][]string, BalanceSheet2Array [
 	combinedBalanceSheetArray, err = FillInDataCellsToEmptyCombinedStatement(combinedBalanceSheetArray, BalanceSheet1Array, BalanceSheet2Array)
 	if err != nil {
 		fmt.Println(err)
-	}
-
-	fmt.Println("Filled Combined Balance Sheet:")
-	for _, row := range combinedBalanceSheetArray {
-		fmt.Printf("%s\n", strings.Join(row, ", "))
 	}
 
 	return combinedBalanceSheetArray

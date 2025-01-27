@@ -3,6 +3,7 @@ package combinecsvfiles
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -151,7 +152,16 @@ func LookupCellValueGivenHeaderAndMetadataCells(OriginalStatement [][]string, li
 		return "", errors.New("index out of range")
 	}
 
-	cellValue = OriginalStatement[rowIndex][columnIndex]
+	//clean the cell value that look like this: -228us-gaap_AccumulatedOtherComprehensiveIncomeLossNetOfTax from https://www.sec.gov/Archives/edgar/data/1326801/000132680115000006 click on one of the line item value in the link to see the text
+	cellValue = strings.TrimSpace(OriginalStatement[rowIndex][columnIndex])
+	// Regular expression to match a number (including negative) at the start of the string (after any whitespace)
+	re := regexp.MustCompile(`^\s*(-?\d+)`)
+	matches := re.FindStringSubmatch(cellValue)
+	if len(matches) > 1 {
+		// matches[1] contains the captured number
+		cellValue = matches[1]
+	}
+
 	return cellValue, nil
 }
 
