@@ -243,7 +243,30 @@ func RearrangeAllColumns(data [][]string, columnOrder []int) [][]string {
 	return result
 }
 
+// DeleteColumn removes a column at the specified index from a 2D array
+func DeleteColumn(array [][]string, colIndex int) [][]string {
+	result := make([][]string, len(array))
+	for i := range array {
+		// Create a new row without the specified column
+		result[i] = append(array[i][:colIndex], array[i][colIndex+1:]...)
+	}
+	return result
+}
+
+// DeleteRow removes a row at the specified index from a 2D array
+func DeleteRow(array [][]string, rowIndex int) [][]string {
+	result := make([][]string, len(array))
+	for i := range array {
+		if i == rowIndex {
+			continue
+		}
+		result[i] = array[i]
+	}
+	return result
+}
+
 // Helper function to check if any string in the array is contained in the target
+// containsAny is case and space insensitive
 func containsAny(target string, possibilities []string) bool {
 	// Remove spaces and convert to lowercase
 	target = strings.ToLower(strings.ReplaceAll(target, " ", ""))
@@ -296,12 +319,12 @@ func CheckWordsInOrder(text string, phrases []string) bool {
 	return true
 }
 
-// Helper function to check if the row contains a data cell that is not empty
+// DoesDataCellExistInThisRow Helper function to check if the row contains a data cell that is not empty
 func DoesDataCellExistInThisRow(row []string) bool {
 	if len(row) == 0 || row[0] == "" {
 		return false
 	}
-	// Check if any column after the first has data
+	// Check if any column after the first cell has data
 	for i := 1; i < len(row); i++ {
 		if row[i] != "" {
 			return true

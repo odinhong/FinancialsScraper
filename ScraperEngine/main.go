@@ -46,9 +46,9 @@ func main() {
 	fmt.Println("Pinged your deployment. You successfully connected to MongoDB!")
 
 	// var KO_CIK string = "0000021344"
-	var META_CIK string = "0001326801"
+	// var META_CIK string = "0001326801"
 	// var AAPL_CIK string = "0000320193"
-	// var SMRT_CIK string = "0001837014"
+	var SMRT_CIK string = "0001837014"
 	// var SMRT_accessionNumber1 string = "0001104659-21-068286"
 
 	// var KO_accessionNumber1 string = "0001104659-21-068286"
@@ -59,7 +59,8 @@ func main() {
 	// combinecsvfiles.GetFinancialStatementsCsvRfilePathsGivenCIK(SMRT_CIK, client)
 	// geteverythinggivencik.GetEverythingGivenCIK(SMRT_CIK, client)
 	// combinecsvfiles.CommonFieldFinderForFinancialStatementRfile(Meta_IS_filepath)
-	combinecsvfiles.TesterFunction(META_CIK, client)
+	// combinecsvfiles.GenerateLevel1CombinedBalanceSheetsAndSaveAsCsvFileGivenCIK(SMRT_CIK, client)
+	combinecsvfiles.GenerateLevel1CombinedBalanceSheetsAndSaveAsCsvFileGivenCIK(SMRT_CIK, client)
 
 	// // Test OpenAI Connection
 	// if err := combinecsvfiles.TestOpenAIConnection(); err != nil {

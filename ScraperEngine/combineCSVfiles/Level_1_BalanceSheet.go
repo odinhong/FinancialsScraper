@@ -3,6 +3,7 @@ package combinecsvfiles
 import (
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	utilityFunctions "github.com/Programmerdin/FinancialDataSite_Go/utilityFunctions"
@@ -23,7 +24,71 @@ type BalanceSheetLineItemClassifications struct {
 	OtherEquities                        []int
 }
 
-func TesterFunction(CIK string, client *mongo.Client) {
+func Tester1(CIK string, client *mongo.Client) {
+	BalanceSheetArrays, _, _, _, err := GetCsvRfilesIntoArrayVariables(CIK, client)
+	if err != nil {
+		fmt.Println("Error getting CSV files:", err)
+		return
+	}
+
+	//check for failed classifications
+	var failedAccessionNumbers []string
+	var balanceSheetLineItemClassificationsSlice []BalanceSheetLineItemClassifications
+	for i := 0; i < len(BalanceSheetArrays); i++ {
+		BalanceSheetArray := BalanceSheetArrays[i]
+		accessionNumber := BalanceSheetArray[0][1]
+		BalanceSheetLineItemClassifications, err := classifyBalanceSheetLineItems(BalanceSheetArray)
+		if err != nil {
+			fmt.Printf("Error classifying balance sheet line items for accession number %s: %v\n", accessionNumber, err)
+			failedAccessionNumbers = append(failedAccessionNumbers, accessionNumber)
+			//remove the balance sheet from the slice
+			BalanceSheetArrays = append(BalanceSheetArrays[:i], BalanceSheetArrays[i+1:]...)
+			i-- // Decrement i since we removed an element
+			continue
+		}
+		balanceSheetLineItemClassificationsSlice = append(balanceSheetLineItemClassificationsSlice, BalanceSheetLineItemClassifications)
+		fmt.Printf("Successfully classified balance sheet for accession number: %s\n", accessionNumber)
+		fmt.Printf("Classifications: %+v\n", BalanceSheetLineItemClassifications)
+	}
+	if len(failedAccessionNumbers) > 0 {
+		fmt.Println("\nFailed to classify the following accession numbers:")
+		for _, accNum := range failedAccessionNumbers {
+			fmt.Printf("- %s\n", accNum)
+		}
+		fmt.Printf("Total failures: %d\n", len(failedAccessionNumbers))
+	}
+	if len(balanceSheetLineItemClassificationsSlice) != len(BalanceSheetArrays) {
+		fmt.Println("Error: Number of balance sheets classified does not match number of balance sheets")
+	}
+	// fmt.Println(balanceSheetLineItemClassificationsSlice)
+
+	combinedBalanceSheetArray := BalanceSheetArrays[0]
+	for i := 3; i < 4; i++ {
+		combinedBalanceSheetArray = CombineTwoBalanceSheets(combinedBalanceSheetArray, BalanceSheetArrays[i+1])
+	}
+
+	// fmt.Print("Combined Balance Sheet Array: [\n")
+	// for i, row := range combinedBalanceSheetArray {
+	// 	fmt.Printf("  [%s]", strings.Join(row, ", "))
+	// 	if i < len(combinedBalanceSheetArray)-1 {
+	// 		fmt.Print(",")
+	// 	}
+	// 	fmt.Print("\n")
+	// }
+	// fmt.Print("]\n")
+
+	// //convert combinedBalanceSheetArray to csv file and save it to SEC-files/combinedFinancialStatements
+	// directory := filepath.Join("SEC-files", "combinedFinancialStatements")
+	// fileName := CIK + "_combinedBalanceSheetLevel1.csv"
+	// if err := utilityFunctions.Save2DarrayToCsvFile(combinedBalanceSheetArray, directory, fileName); err != nil {
+	// 	fmt.Printf("Error saving CSV file: %v\n", err)
+	// 	return
+	// }
+	// fmt.Printf("Successfully saved combined balance sheet to %s\n", filepath.Join(directory, fileName))
+
+}
+
+func GenerateLevel1CombinedBalanceSheetsAndSaveAsCsvFileGivenCIK(CIK string, client *mongo.Client) {
 	BalanceSheetArrays, _, _, _, err := GetCsvRfilesIntoArrayVariables(CIK, client)
 	if err != nil {
 		fmt.Println("Error getting CSV files:", err)
@@ -31,7 +96,6 @@ func TesterFunction(CIK string, client *mongo.Client) {
 	}
 
 	var failedAccessionNumbers []string
-
 	var balanceSheetLineItemClassificationsSlice []BalanceSheetLineItemClassifications
 	for i := 0; i < len(BalanceSheetArrays); i++ {
 		BalanceSheetArray := BalanceSheetArrays[i]
@@ -49,7 +113,6 @@ func TesterFunction(CIK string, client *mongo.Client) {
 		// fmt.Printf("Successfully classified balance sheet for accession number: %s\n", accessionNumber)
 		// fmt.Printf("Classifications: %+v\n", BalanceSheetLineItemClassifications)
 	}
-
 	if len(failedAccessionNumbers) > 0 {
 		fmt.Println("\nFailed to classify the following accession numbers:")
 		for _, accNum := range failedAccessionNumbers {
@@ -57,7 +120,6 @@ func TesterFunction(CIK string, client *mongo.Client) {
 		}
 		fmt.Printf("Total failures: %d\n", len(failedAccessionNumbers))
 	}
-
 	if len(balanceSheetLineItemClassificationsSlice) != len(BalanceSheetArrays) {
 		fmt.Println("Error: Number of balance sheets classified does not match number of balance sheets")
 	}
@@ -150,6 +212,31 @@ func CombineTwoBalanceSheets(BalanceSheet1Array [][]string, BalanceSheet2Array [
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	//convert the title line item names to the names I want to use, otherwise FillInDataCells wont work properly
+	//ex) if the OG line item name is "Total Shareholders' Equity" but since the combinedBalanceSheet has "Total Stockholders' Equity" and FIllinDataCEll funciton only matches exact match so it won't find the line item.
+	//resulting in a combinedbalance sheet with missing data cells
+	// we do this for all the title line except for Other Equities
+	BalanceSheet1Array[BalanceSheet1Classifications.CurrentAssets][0] = "Current Assets"
+	BalanceSheet1Array[BalanceSheet1Classifications.TotalCurrentAssets][0] = "Total Current Assets"
+	BalanceSheet1Array[BalanceSheet1Classifications.TotalAssets][0] = "Total Assets"
+	BalanceSheet1Array[BalanceSheet1Classifications.CurrentLiabilities][0] = "Current Liabilities"
+	BalanceSheet1Array[BalanceSheet1Classifications.TotalCurrentLiabilities][0] = "Total Current Liabilities"
+	BalanceSheet1Array[BalanceSheet1Classifications.TotalLiabilities][0] = "Total Liabilities"
+	BalanceSheet1Array[BalanceSheet1Classifications.StockholdersEquity][0] = "Stockholders' Equity"
+	BalanceSheet1Array[BalanceSheet1Classifications.TotalStockholdersEquity][0] = "Total Stockholders' Equity"
+	BalanceSheet1Array[BalanceSheet1Classifications.TotalLiabilitiesEquityAndOtherEquity][0] = "Total Liabilities and Stockholders' Equity"
+
+	BalanceSheet2Array[BalanceSheet2Classifications.CurrentAssets][0] = "Current Assets"
+	BalanceSheet2Array[BalanceSheet2Classifications.TotalCurrentAssets][0] = "Total Current Assets"
+	BalanceSheet2Array[BalanceSheet2Classifications.TotalAssets][0] = "Total Assets"
+	BalanceSheet2Array[BalanceSheet2Classifications.CurrentLiabilities][0] = "Current Liabilities"
+	BalanceSheet2Array[BalanceSheet2Classifications.TotalCurrentLiabilities][0] = "Total Current Liabilities"
+	BalanceSheet2Array[BalanceSheet2Classifications.TotalLiabilities][0] = "Total Liabilities"
+	BalanceSheet2Array[BalanceSheet2Classifications.StockholdersEquity][0] = "Stockholders' Equity"
+	BalanceSheet2Array[BalanceSheet2Classifications.TotalStockholdersEquity][0] = "Total Stockholders' Equity"
+	BalanceSheet2Array[BalanceSheet2Classifications.TotalLiabilitiesEquityAndOtherEquity][0] = "Total Liabilities and Stockholders' Equity"
+
 	combinedBalanceSheetLineItems, err := CombineLineItemNamesOfTwoBalanceSheetsIntoOne(BalanceSheet1Array, BalanceSheet2Array, BalanceSheet1Classifications, BalanceSheet2Classifications)
 	if err != nil {
 		fmt.Println(err)
@@ -173,7 +260,7 @@ func CombineTwoBalanceSheets(BalanceSheet1Array [][]string, BalanceSheet2Array [
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Non Current Liabilities"})
 	combinedBalanceSheetArray = HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, NonCurrentLiabilitiesLineItemNames)
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Liabilities"})
-	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Stockholders Equity"})
+	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Stockholders' Equity"})
 	combinedBalanceSheetArray = HelperFunction_AppendLineItemNamesToBalanceSheetArray(combinedBalanceSheetArray, StockholdersEquityLineItemNames)
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Stockholders' Equity"})
 	combinedBalanceSheetArray = append(combinedBalanceSheetArray, []string{"Total Liabilities and Stockholders' Equity"})
@@ -375,22 +462,22 @@ func classifyBalanceSheetLineItems(BalanceSheetArray [][]string) (BalanceSheetLi
 		if len(row) == 0 {
 			continue // Skip empty rows
 		}
-		if containsAny(row[0], []string{"Current Assets", "Current assets"}) && currentAssetsRowIndex == -1 {
+		if containsAny(row[0], []string{"Current Assets"}) && currentAssetsRowIndex == -1 {
 			currentAssetsRowIndex = i
 		}
-		if containsAny(row[0], []string{"Total Current Assets", "Total current assets"}) && totalCurrentAssetsRowIndex == -1 && DoesDataCellExistInThisRow(row) {
+		if containsAny(row[0], []string{"Total Current Assets"}) && totalCurrentAssetsRowIndex == -1 && DoesDataCellExistInThisRow(row) {
 			totalCurrentAssetsRowIndex = i
 		}
-		if containsAny(row[0], []string{"Total Assets", "Total assets"}) && totalAssetsRowIndex == -1 && DoesDataCellExistInThisRow(row) {
+		if containsAny(row[0], []string{"Total Assets"}) && totalAssetsRowIndex == -1 && DoesDataCellExistInThisRow(row) {
 			totalAssetsRowIndex = i
 		}
-		if containsAny(row[0], []string{"Current Liabilities", "Current liabilities"}) && currentLiabilitiesRowIndex == -1 {
+		if containsAny(row[0], []string{"Current Liabilities"}) && currentLiabilitiesRowIndex == -1 {
 			currentLiabilitiesRowIndex = i
 		}
-		if containsAny(row[0], []string{"Total Current Liabilities", "Total current liabilities"}) && totalCurrentLiabilitiesRowIndex == -1 && DoesDataCellExistInThisRow(row) {
+		if containsAny(row[0], []string{"Total Current Liabilities"}) && totalCurrentLiabilitiesRowIndex == -1 && DoesDataCellExistInThisRow(row) {
 			totalCurrentLiabilitiesRowIndex = i
 		}
-		if containsAny(row[0], []string{"Total Liabilities", "Total liabilities"}) && totalLiabilitiesRowIndex == -1 && DoesDataCellExistInThisRow(row) {
+		if containsAny(row[0], []string{"Total Liabilities"}) && totalLiabilitiesRowIndex == -1 && DoesDataCellExistInThisRow(row) {
 			totalLiabilitiesRowIndex = i
 		}
 		if containsAny(row[0], []string{"Stockholders' Equity", "Shareholders' Equity", "Shareowners' Equity", "Equity"}) && notContainsAny(row[0], []string{"Investment", "marketable", "securities"}) && stockholdersEquityRowIndex == -1 {
@@ -559,4 +646,30 @@ func classifyBalanceSheetLineItems(BalanceSheetArray [][]string) (BalanceSheetLi
 		TotalLiabilitiesEquityAndOtherEquity: totalLiabilitiesEquityAndOtherEquityRowIndex,
 		OtherEquities:                        otherEquitiesRowIndex,
 	}, nil
+}
+
+// PrintBalanceSheetFields demonstrates how to iterate through the fields of BalanceSheetLineItemClassifications
+func PrintBalanceSheetFields(bs BalanceSheetLineItemClassifications) {
+	// Get the reflect.Value of the struct
+	v := reflect.ValueOf(bs)
+
+	// Get the reflect.Type of the struct
+	t := v.Type()
+
+	// Iterate through all fields
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		fieldName := t.Field(i).Name
+
+		// Handle the OtherEquities slice separately
+		if fieldName == "OtherEquities" {
+			fmt.Printf("Field: %s (slice), Value: %v\n", fieldName, field.Interface())
+			// You can iterate through the slice if needed
+			for j := 0; j < field.Len(); j++ {
+				fmt.Printf("\tItem %d: %v\n", j, field.Index(j).Interface())
+			}
+		} else {
+			fmt.Printf("Field: %s, Value: %v\n", fieldName, field.Interface())
+		}
+	}
 }
