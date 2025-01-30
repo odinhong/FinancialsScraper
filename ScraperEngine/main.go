@@ -60,7 +60,8 @@ func main() {
 	// geteverythinggivencik.GetEverythingGivenCIK(SMRT_CIK, client)
 	// combinecsvfiles.CommonFieldFinderForFinancialStatementRfile(Meta_IS_filepath)
 	// combinecsvfiles.GenerateLevel1CombinedBalanceSheetsAndSaveAsCsvFileGivenCIK(SMRT_CIK, client)
-	combinecsvfiles.GenerateLevel1CombinedBalanceSheetsAndSaveAsCsvFileGivenCIK(SMRT_CIK, client)
+	// combinecsvfiles.GenerateLevel1CombinedBalanceSheetsAndSaveAsCsvFileGivenCIK(SMRT_CIK, client)
+	combinecsvfiles.TesterFunctionForLevel2BalanceSheets(SMRT_CIK)
 
 	// // Test OpenAI Connection
 	// if err := combinecsvfiles.TestOpenAIConnection(); err != nil {

@@ -255,14 +255,10 @@ func DeleteColumn(array [][]string, colIndex int) [][]string {
 
 // DeleteRow removes a row at the specified index from a 2D array
 func DeleteRow(array [][]string, rowIndex int) [][]string {
-	result := make([][]string, len(array))
-	for i := range array {
-		if i == rowIndex {
-			continue
-		}
-		result[i] = array[i]
+	if rowIndex < 0 || rowIndex >= len(array) {
+		return array
 	}
-	return result
+	return append(array[:rowIndex], array[rowIndex+1:]...)
 }
 
 // Helper function to check if any string in the array is contained in the target

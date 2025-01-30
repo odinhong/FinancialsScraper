@@ -19,7 +19,14 @@ func TesterFunctionForLevel2BalanceSheets(CIK string) [][]string {
 		return nil
 	}
 	Level1BalanceSheetArray, _ = DeleteDuplicateBalanceSheetColumnsWithSameReportPeriodAndKeepTheMostRecentReportDateColumn(Level1BalanceSheetArray)
+	utilityFunctions.Save2DarrayToCsvFile(Level1BalanceSheetArray, base_directory, CIK+"_test.csv")
+	fmt.Println("check 1")
+
 	BalanceSheetArrayInProcess, _ := DeleteEmptyLineItemBalanceSheetRows(Level1BalanceSheetArray)
+	fmt.Println("check 2")
+
+	utilityFunctions.Save2DarrayToCsvFile(BalanceSheetArrayInProcess, base_directory, CIK+"_combinedBalanceSheetLevel2.csv")
+	fmt.Println("Saved Balance Sheet Array to CSV file")
 	return BalanceSheetArrayInProcess
 }
 
@@ -108,12 +115,17 @@ func DeleteEmptyLineItemBalanceSheetRows(BalanceSheetArray [][]string) (Processe
 			i--
 			continue
 		}
-		//skip row if it contains any of the balance sheet category names (case and space insensitive)
+
+		//skip row if it matches any of the balance sheet category names (case and space insensitive)
+		skipRow := false
 		for _, categoryName := range BalanceSheetCategoryNames {
-			if strings.ToLower(strings.ReplaceAll(BalanceSheetArray[i][0], " ", "")) == strings.ToLower(strings.ReplaceAll(categoryName, " ", "")) {
-				i++
-				continue
+			if strings.EqualFold(strings.ReplaceAll(BalanceSheetArray[i][0], " ", ""), strings.ReplaceAll(categoryName, " ", "")) {
+				skipRow = true
+				break
 			}
+		}
+		if skipRow {
+			continue
 		}
 		//delete row if it doesn't contain any of the balance sheet category names and does not contain any data cells
 		if !DoesDataCellExistInThisRow(BalanceSheetArray[i]) {
