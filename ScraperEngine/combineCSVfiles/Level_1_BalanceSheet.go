@@ -88,53 +88,24 @@ func GenerateLevel1CombinedBalanceSheetsAndSaveAsCsvFileGivenCIK(CIK string, cli
 }
 
 func CombineTwoBalanceSheets(BalanceSheet1Array [][]string, BalanceSheet2Array [][]string) (CombinedBalanceSheet [][]string) {
-
 	//go thru the combinedBalanceSheetLineItems and essentailly create a new balance sheet
 	//for new balance sheet, we basically draw out the left col and the top rows for dates n stuff
 	// and for each cell we do find a value that matches all the left col and top rows for the given cell in two input balancesheet arrays
 
-	separatorRowIndex := -1
-	// accessionNumberRowIndex := -1
-	// formIndex := -1
-	reportDateIndex := -1
-	reportPeriodIndex := -1
-
-	for i, row := range BalanceSheet1Array {
-		if len(row) == 0 {
-			continue // Skip empty rows
-		}
-		if row[0] == "separator" {
-			separatorRowIndex = i
-			break
-		}
-		if row[0] == "reportDate" {
-			reportDateIndex = i
-		}
-		if row[0] == "reportPeriod" {
-			reportPeriodIndex = i
-		}
-		// if row[0] == "accessionNumber" {
-		// 	accessionNumberRowIndex = i
-		// }
-		// if row[0] == "form" {
-		// 	formIndex = i
-		// }
-	}
-
 	var combinedBalanceSheetArray [][]string
 	//add in metadata of first balance sheet
-	for i := 0; i <= separatorRowIndex; i++ {
+	for i := 0; i <= SeparatorRowIndex; i++ {
 		combinedBalanceSheetArray = append(combinedBalanceSheetArray, BalanceSheet1Array[i])
 	}
 	//add in metadata of second balance sheet
-	for i := 0; i <= separatorRowIndex; i++ {
+	for i := 0; i <= SeparatorRowIndex; i++ {
 		for j := 1; j < len(BalanceSheet2Array[0]); j++ {
 			combinedBalanceSheetArray[i] = append(combinedBalanceSheetArray[i], BalanceSheet2Array[i][j])
 		}
 	}
 
 	//get the index of the cols in order it should be in
-	rearrangedColumnIndices := GetIndexOfRearrangedColumnsByReportPeriodAndDate(combinedBalanceSheetArray, reportPeriodIndex, reportDateIndex)
+	rearrangedColumnIndices := GetIndexOfRearrangedColumnsByReportPeriodAndDate(combinedBalanceSheetArray, ReportPeriodRowIndex, ReportDateRowIndex)
 
 	// Rearrange all columns at once
 	combinedBalanceSheetArray = RearrangeAllColumns(combinedBalanceSheetArray, rearrangedColumnIndices)
@@ -381,19 +352,9 @@ func classifyBalanceSheetLineItems(BalanceSheetArray [][]string) (BalanceSheetLi
 	}
 
 	var accessionNumber string = BalanceSheetArray[0][1]
-	var separatorRowIndex int
-	for i, row := range BalanceSheetArray {
-		if len(row) == 0 {
-			continue // Skip empty rows
-		}
-		if row[0] == "separator" {
-			separatorRowIndex = i
-			break
-		}
-	}
 
 	//find all the line items in the balance sheet
-	for i := separatorRowIndex + 1; i < len(BalanceSheetArray); i++ {
+	for i := SeparatorRowIndex + 1; i < len(BalanceSheetArray); i++ {
 		row := BalanceSheetArray[i]
 		if len(row) == 0 {
 			continue // Skip empty rows
@@ -483,26 +444,9 @@ func classifyBalanceSheetLineItems(BalanceSheetArray [][]string) (BalanceSheetLi
 			totalLiabilitiesEquityAndOtherEquityRowIndex)
 	}
 
-	// Check the order using the helper function
-	// Create a map of indices for order checking
-	testIndices := map[string]int{
-		"currentAssets":           currentAssetsRowIndex,
-		"totalCurrentAssets":      totalCurrentAssetsRowIndex,
-		"totalAssets":             totalAssetsRowIndex,
-		"currentLiabilities":      currentLiabilitiesRowIndex,
-		"totalCurrentLiabilities": totalCurrentLiabilitiesRowIndex,
-		"totalLiabilities":        totalLiabilitiesRowIndex,
-		"stockholdersEquity":      stockholdersEquityRowIndex,
-		"totalStockholdersEquity": totalStockholdersEquityRowIndex,
-		"totalLiabilitiesEquity":  totalLiabilitiesEquityAndOtherEquityRowIndex,
-	}
-	if err := CheckBalanceSheetOrder(testIndices); err != nil {
-		return BalanceSheetLineItemClassifications{}, fmt.Errorf("balance sheet order error: %v", err)
-	}
-
 	//check if all data cell rows are accouneted for
 	var dataCellRowIndex []int
-	for i := separatorRowIndex + 1; i < len(BalanceSheetArray); i++ {
+	for i := SeparatorRowIndex + 1; i < len(BalanceSheetArray); i++ {
 		if len(BalanceSheetArray[i]) == 0 {
 			continue // Skip empty rows
 		}

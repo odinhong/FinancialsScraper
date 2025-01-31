@@ -31,27 +31,12 @@ func TesterFunctionForLevel2BalanceSheets(CIK string) [][]string {
 }
 
 func DeleteDuplicateBalanceSheetColumnsWithSameReportPeriodAndKeepTheMostRecentReportDateColumn(Level1BalanceSheetArray [][]string) (ProcessedBalanceSheetArray [][]string, err error) {
-	//find accessorNumber, reportDate, reportPeriod, separator row indices
-	var accessorNumberRowIndex int
-	var reportDateRowIndex int
-	var reportPeriodRowIndex int
-	for i := 0; i < 9; i++ { //i<9 because the separator row should be i=7
-		switch Level1BalanceSheetArray[i][0] {
-		case "accessionNumber":
-			accessorNumberRowIndex = i
-		case "reportDate":
-			reportDateRowIndex = i
-		case "reportPeriod":
-			reportPeriodRowIndex = i
-		}
-	}
-
 	//If the column has same reportPeriod & reportDurationInMonths on the right delete it
-	for i := 1; i < len(Level1BalanceSheetArray[accessorNumberRowIndex])-1; i++ { //-1 to prevent out of bounds error
-		reportDate_left := Level1BalanceSheetArray[reportDateRowIndex][i]
-		reportPeriod_left := Level1BalanceSheetArray[reportPeriodRowIndex][i]
-		reportDate_right := Level1BalanceSheetArray[reportDateRowIndex][i+1]
-		reportPeriod_right := Level1BalanceSheetArray[reportPeriodRowIndex][i+1]
+	for i := 1; i < len(Level1BalanceSheetArray[AccessionNumberRowIndex])-1; i++ { //-1 to prevent out of bounds error
+		reportDate_left := Level1BalanceSheetArray[ReportDateRowIndex][i]
+		reportPeriod_left := Level1BalanceSheetArray[ReportPeriodRowIndex][i]
+		reportDate_right := Level1BalanceSheetArray[ReportDateRowIndex][i+1]
+		reportPeriod_right := Level1BalanceSheetArray[ReportPeriodRowIndex][i+1]
 
 		// Convert YYYYMMDD format strings directly to integers
 		reportDateLeft, err := strconv.Atoi(reportDate_left)
@@ -82,33 +67,7 @@ func DeleteDuplicateBalanceSheetColumnsWithSameReportPeriodAndKeepTheMostRecentR
 }
 
 func DeleteEmptyLineItemBalanceSheetRows(BalanceSheetArray [][]string) (ProcessedBalanceSheetArray [][]string, err error) {
-	BalanceSheetCategoryNames := []string{
-		"Current Assets",
-		"Total Current Assets",
-		"Non Current Assets",
-		"Total Assets",
-		"Current Liabilities",
-		"Total Current Liabilities",
-		"Non Current Liabilities",
-		"Total Liabilities",
-		"Stockholders Equity",
-		"Total Stockholders' Equity",
-		"Other Equities",
-	}
-
-	//find separator row index
-	separatorRowIndex := -1
-	for i, row := range BalanceSheetArray {
-		if len(row) == 0 {
-			continue // Skip empty rows
-		}
-		if row[0] == "separator" {
-			separatorRowIndex = i
-			break
-		}
-	}
-
-	for i := separatorRowIndex + 1; i < len(BalanceSheetArray); i++ {
+	for i := SeparatorRowIndex + 1; i < len(BalanceSheetArray); i++ {
 		//remove empty row
 		if len(BalanceSheetArray[i]) == 0 {
 			BalanceSheetArray = DeleteRow(BalanceSheetArray, i)
@@ -118,7 +77,7 @@ func DeleteEmptyLineItemBalanceSheetRows(BalanceSheetArray [][]string) (Processe
 
 		//skip row if it matches any of the balance sheet category names (case and space insensitive)
 		skipRow := false
-		for _, categoryName := range BalanceSheetCategoryNames {
+		for _, categoryName := range BalanceSheetCategoryNames { //BalanceSheetCategoryNames is defined in constants.go
 			if strings.EqualFold(strings.ReplaceAll(BalanceSheetArray[i][0], " ", ""), strings.ReplaceAll(categoryName, " ", "")) {
 				skipRow = true
 				break
